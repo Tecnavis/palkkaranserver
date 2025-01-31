@@ -20,6 +20,8 @@ const upload = multer({
 
 router.post('/', upload, Controller.create);
 router.get('/',Controller.getAll)
+
+router.get("/popular", Controller.getPopular); 
 router.get('/:id',Controller.get)
 router.delete('/:id',Controller.deleteProduct)
 router.put('/:id',upload,Controller.update)
@@ -27,4 +29,5 @@ router.put('/:id',upload,Controller.update)
 router.get("/search/:query", Controller.searchProducts);
 
 router.get("/category/:categoryName", Controller.getProductsByCategory);
+//random products
 module.exports = router;

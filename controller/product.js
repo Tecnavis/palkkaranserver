@@ -183,3 +183,12 @@ exports.searchProducts = async (req, res) => {
       res.status(500).json({ message: "Error searching products", error: error.message });
   }
 };
+
+
+//get random products
+// Get 6 random products
+exports.getPopular = asyncHandler(async (req, res) => {
+  const randomProducts = await Product.aggregate([{ $sample: { size: 6 } }]);
+  res.status(200).json(randomProducts);
+});
+

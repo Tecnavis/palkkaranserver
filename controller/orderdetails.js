@@ -168,7 +168,40 @@ exports.getAllOrders = async (req, res) => {
     }
 };
 
-
+exports.getMostOrderedProducts = async (req, res) => {
+    try {
+      // Aggregation pipeline to get the most ordered products
+      const mostOrderedProducts = await OrderProduct.aggregate([
+        { $unwind: "$productItems" }, // Unwind productItems array
+        { $group: {
+            _id: "$productItems.product", // Group by product ID
+            totalQuantity: { $sum: "$productItems.quantity" }, // Sum the quantity for each product
+          },
+        },
+        { $sort: { totalQuantity: -1 } }, // Sort by total quantity in descending order
+        { $limit: 6 }, // Limit to the top 6 most ordered products
+        { $lookup: {
+            from: "products", // Join with the Product collection
+            localField: "_id",
+            foreignField: "_id",
+            as: "product", // Alias for joined product data
+          },
+        },
+        { $unwind: "$product" }, // Unwind the product data to simplify the result
+        { $project: {
+            product: 1, // Include the product data
+            totalQuantity: 1, // Include the total quantity
+          },
+        },
+      ]);
+  
+      res.status(200).json(mostOrderedProducts);
+    } catch (error) {
+      console.error("Error fetching most ordered products:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+  
 
 exports.getOrdersByCustomerId = async (req, res) => {
     try {
@@ -259,3 +292,5 @@ exports.getProductItemsByCustomer = asyncHandler(async (req, res) => {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
 });
+
+

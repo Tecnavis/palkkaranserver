@@ -6,6 +6,8 @@ const orderController = require("../controller/orderdetails");
 router.post("/", orderController.createOrder);
 router.patch("/:orderId", orderController.updateDateStatus);
 router.get('/', orderController.getAllOrders);
+router.get('/most-ordered', orderController.getMostOrderedProducts);
+
 router.delete('/:id', orderController.delete);
 router.get("/:customerId", orderController.getOrdersByCustomerId);
 // Get selected plan details by customer ID
