@@ -18,6 +18,7 @@ var wishlist= require('./routes/wishlist')
 var plan = require('./routes/plan');
 var orderdetails = require('./routes/orderdetails');
 var review = require('./routes/review');
+var banner = require('./routes/banner');
 
 // Connect to database
 connectDB();
@@ -56,6 +57,7 @@ app.use('/wishlist',wishlist)
 app.use('/plan',plan)
 app.use('/orderdetails',orderdetails)
 app.use('/review',review)
+app.use('/banner',banner)
 
 // 404 handler - This should come after all valid routes
 app.use((req, res, next) => {
