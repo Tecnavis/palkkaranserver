@@ -127,7 +127,7 @@ exports.get = asyncHandler(async (req, res) => {
 
 // Update admin
 exports.update = asyncHandler(async (req, res) => {
-    const { email, name, phone, role,instagram,facebook,twitter,linkedin,youtube,whatsapp,address } = req.body;
+    const { email, name, phone, role,instagram,facebook,twitter,linkedin,youtube,whatsapp,address,route } = req.body;
     const { id } = req.params;
   
     try {
@@ -155,6 +155,7 @@ exports.update = asyncHandler(async (req, res) => {
       admin.linkedin = linkedin;
       admin.youtube = youtube;
       admin.whatsapp = whatsapp;
+      admin.route = route;
       admin.address = address;
       if (req.file) {
         admin.image = req.file.filename;
@@ -210,6 +211,7 @@ exports.login = asyncHandler(async (req, res) => {
           linkedin: admin.linkedin,
           youtube: admin.youtube,
           whatsapp: admin.whatsapp,
+          route: admin.route,
           address: admin.address
         };
         
@@ -225,43 +227,6 @@ exports.login = asyncHandler(async (req, res) => {
       return res.status(500).json({ error: "Server error, please try again" });
     }
 });
-
-
-
-// exports.resetPasswordRequest = async (req, res) => {
-//     const { email } = req.body;
-//     try {
-//       const admin = await AdminsModel.findOne({ email });
-  
-//       if (!admin) {
-//         return res.status(404).json({ message: "Email not found" });
-//       }
-//       const resetToken = jwt.sign({ email: admin.email }, "myjwtsecretkey", { expiresIn: '1h' });
-//       const resetLink = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
-  
-//       // Send email using nodemailer
-//       const transporter = nodemailer.createTransport({
-//         service: 'gmail',
-//         auth: {
-//           user: 'your-email@gmail.com',
-//           pass: 'your-password'
-//         }
-//       });
-  
-//       const mailOptions = {
-//         from: 'your-email@gmail.com',
-//         to: admin.email,
-//         subject: 'Password Reset Request',
-//         text: `Click the following link to reset your password: ${resetLink}`
-//       };
-  
-//       await transporter.sendMail(mailOptions);
-  
-//       return res.status(200).json({ message: 'Password reset link sent to your email.' });
-//     } catch (err) {
-//       return res.status(500).json({ message: 'Something went wrong, please try again.' });
-//     }
-//   };
 
 
 // Block an admin
@@ -318,3 +283,23 @@ exports.changePassword = async (req, res) => {
         res.status(500).json({ message: 'Server error while updating password' });
     }
 };
+
+exports.assignRouteToAdmin = async (req, res) => {
+  try {
+      const { adminId } = req.params;
+      const { route } = req.body;
+
+      const updatedAdmin = await AdminsModel.findByIdAndUpdate(
+          adminId,
+          { route },
+          { new: true }
+      );
+
+      if (!updatedAdmin) {
+          return res.status(404).json({ message: "Admin not found" });
+      }
+
+      res.status(200).json({ message: "Route assigned successfully", admin: updatedAdmin });
+  } catch (error) {
+      res.status(500).json({ message: "Error assigning route", error });
+  }}

@@ -27,4 +27,5 @@ router.post('/reset-password',Controller.resetPassword);
 router.put('/block/:id', Controller.toggleBlockAdmin);
 router.put('/unblock/:id',Controller.unblockAdmin);
 router.put('/change-password/:adminId', Controller.changePassword);
+router.put("/assign-route/:adminId", Controller.assignRouteToAdmin); 
 module.exports = router;
