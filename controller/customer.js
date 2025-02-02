@@ -7,81 +7,6 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 const twilio = require('twilio');
 
-// Your Twilio account SID and Auth token
-// const accountSid = 'XXXXXXX';
-// const authToken = 'XXXXXXX';
-// const client = new twilio(accountSid, authToken);
-
-// Function to generate a random OTP
-// function generateOTP() {
-//     return Math.floor(100000 + Math.random() * 900000); // 6 digit OTP
-// }
-
-// Send OTP to the user's mobile number
-// exports.sendOTP = async (req, res) => {
-//     const { phone } = req.body;
-
-//     // Find customer by phone number
-//     const customer = await CustomerModel.findOne({ phone });
-
-//     if (!customer) {
-//         return res.status(404).json({ message: 'Customer not found' });
-//     }
-
-//     // Generate OTP
-//     const otp = generateOTP();
-
-//     // Send OTP via Twilio (SMS)
-//     try {
-//         await client.messages.create({
-//             body: `Your OTP for password reset is: ${otp}`,
-//             from: '+1234567890', // Twilio phone number
-//             to: `+${phone}` // Customer's phone number with country code
-//         });
-
-//         // Save OTP in the customer's record (temporarily, for verification)
-//         customer.otp = otp;
-//         customer.otpExpires = Date.now() + 15 * 60 * 1000; // OTP expires in 15 minutes
-//         await customer.save();
-
-//         res.status(200).json({ message: 'OTP sent successfully' });
-//     } catch (error) {
-//         console.error('Error sending OTP:', error);
-//         res.status(500).json({ message: 'Error sending OTP' });
-//     }
-// };
-
-// // Verify OTP and allow password reset
-// exports.verifyOTP = async (req, res) => {
-//     const { phone, otp, newPassword } = req.body;
-
-//     // Find customer by phone number
-//     const customer = await CustomerModel.findOne({ phone });
-
-//     if (!customer) {
-//         return res.status(404).json({ message: 'Customer not found' });
-//     }
-
-//     // Check if OTP exists and is within the expiry time
-//     if (customer.otp !== otp || customer.otpExpires < Date.now()) {
-//         return res.status(400).json({ message: 'Invalid or expired OTP' });
-//     }
-
-//     // Hash the new password before saving
-//     try {
-//         const hashedPassword = await bcrypt.hash(newPassword, 10);
-//         customer.password = hashedPassword;
-//         customer.otp = undefined; // Clear OTP after use
-//         customer.otpExpires = undefined; // Clear OTP expiry
-
-//         await customer.save();
-
-//         res.status(200).json({ message: 'Password reset successful' });
-//     } catch (error) {
-//         console.error('Error resetting password:', error);
-//         res.status(500).json({ message: 'Error resetting password' });
-//     }
-// };
 
 // Function to generate the next customerId
 const generateCustomerId = async () => {
@@ -126,7 +51,7 @@ exports.create = asyncHandler(async (req, res) => {
     // Generate a new customerId
     const customerId = await generateCustomerId();
 
-    // Create the new customer
+    // Create the new customer; note that isConfirmed is false by default.
     const customer = await CustomerModel.create({
         customerId,
         name,
@@ -140,6 +65,7 @@ exports.create = asyncHandler(async (req, res) => {
     });
 
     if (customer) {
+        // Optionally, send a confirmation email or message here.
         res.status(201).json({
             _id: customer._id,
             customerId: customer.customerId,
@@ -149,12 +75,14 @@ exports.create = asyncHandler(async (req, res) => {
             address: customer.address,
             routeno: customer.routeno,
             routename: customer.routename,
-            email: customer.email
+            email: customer.email,
+            message: "Customer created successfully. Please confirm your account to be able to login."
         });
     } else {
         res.status(400).json({ message: "Invalid customer data" });
     }
 });
+
 
 
 
@@ -219,6 +147,11 @@ exports.login = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Incorrect phone number or password" });
     }
 
+    // Check if the customer is confirmed
+    if (!customer.isConfirmed) {
+        return res.status(400).json({ message: "Your account is not confirmed. Please confirm your account before logging in." });
+    }
+
     // Compare the provided password with the hashed password in the database
     const isPasswordMatch = await bcrypt.compare(password, customer.password);
     if (!isPasswordMatch) {
@@ -227,16 +160,17 @@ exports.login = asyncHandler(async (req, res) => {
 
     // Generate access token if phone and password are correct
     const accessToken = jwt.sign({
-        user: {
-            username: customer.name,
-            userId: customer._id,
-            userPhone: customer.phone,
-            address: customer.address,
-            location: customer.location,
+            user: {
+                username: customer.name,
+                userId: customer._id,
+                userPhone: customer.phone,
+                address: customer.address,
+                location: customer.location,
+            },
         },
-    },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: '15m' });
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: '15m' }
+    );
 
     // Respond with the access token and user details
     res.status(200).json({
@@ -251,128 +185,6 @@ exports.login = asyncHandler(async (req, res) => {
     });
 });
 
-
-// exports.getCustomerAddresses = async (req, res) => {
-
-//     try {
-//         // Find the customer by customerId
-//         const customer = await CustomerModel.findById(req.params.id);
-
-//         if (!customer) {
-//             return res.status(404).json({ message: "Customer not found" });
-//         }
-
-//         // Return the addresses
-//         return res.status(200).json({ addresses: customer.address });
-//     } catch (error) {
-//         console.error("Error fetching customer addresses:", error);
-//         return res.status(500).json({ message: "Server error" });
-//     }
-// };
-// exports. addCustomerAddress = async (req, res) => {
-//     const { newAddress } = req.body; // The new address to add
-
-//     if (!newAddress) {
-//         return res.status(400).json({ message: "New address is required" });
-//     }
-
-//     try {
-//         // Find the customer by customerId
-//         const customer = await CustomerModel.findById(req.params.id);
-
-//         if (!customer) {
-//             return res.status(404).json({ message: "Customer not found" });
-//         }
-
-//         // Add the new address to the address array
-//         customer.address.push(newAddress);
-
-//         // Save the updated customer
-//         await customer.save();
-
-//         return res.status(200).json({
-//             message: "Address added successfully",
-//             updatedAddresses: customer.address,
-//         });
-//     } catch (error) {
-//         console.error("Error adding customer address:", error);
-//         return res.status(500).json({ message: "Server error" });
-//     }
-// };
-
-
-// // Controller to edit a specific address for a customer by their ID
-// exports. editCustomerAddress = async (req, res) => {
-//     const {  addressIndex } = req.params;
-//     const { updatedAddress } = req.body;
-
-//     if (!updatedAddress) {
-//         return res.status(400).json({ message: "Updated address is required" });
-//     }
-
-//     try {
-//         // Find the customer by customerId
-//         const customer = await CustomerModel.findById(req.params.id);
-
-//         if (!customer) {
-//             return res.status(404).json({ message: "Customer not found" });
-//         }
-
-//         // Validate the address index
-//         if (addressIndex < 0 || addressIndex >= customer.address.length) {
-//             return res.status(400).json({ message: "Invalid address index" });
-//         }
-
-//         // Update the address at the specified index
-//         customer.address[addressIndex] = updatedAddress;
-
-//         // Save the updated customer
-//         await customer.save();
-
-//         return res.status(200).json({
-//             message: "Address updated successfully",
-//             updatedAddresses: customer.address,
-//         });
-//     } catch (error) {
-//         console.error("Error editing customer address:", error);
-//         return res.status(500).json({ message: "Server error" });
-//     }
-// };
-
-
-
-// // Controller to delete a specific address for a customer by their ID
-// exports. deleteCustomerAddress = async (req, res) => {
-//     const {  addressIndex } = req.params;
-
-//     try {
-//         // Find the customer by customerId
-//         const customer = await CustomerModel.findById(req.params.id);
-
-//         if (!customer) {
-//             return res.status(404).json({ message: "Customer not found" });
-//         }
-
-//         // Validate the address index
-//         if (addressIndex < 0 || addressIndex >= customer.address.length) {
-//             return res.status(400).json({ message: "Invalid address index" });
-//         }
-
-//         // Remove the address at the specified index
-//         customer.address.splice(addressIndex, 1);
-
-//         // Save the updated customer
-//         await customer.save();
-
-//         return res.status(200).json({
-//             message: "Address deleted successfully",
-//             updatedAddresses: customer.address,
-//         });
-//     } catch (error) {
-//         console.error("Error deleting customer address:", error);
-//         return res.status(500).json({ message: "Server error" });
-//     }
-// };
 
 //updateCustomerDetails by id (name,phone,email)
 exports.updateCustomerDetails = async (req, res) => {
@@ -455,10 +267,6 @@ exports.changePassword = async (req, res) => {
         return res.status(500).json({ message: "Server error." });
     }
 };
-
-
-
-//{{baseURL1}}/customer/change-password/6791f1dc7c1f0de514d255b1
 
 
 
@@ -561,3 +369,20 @@ exports.deleteCustomerAddress = async (req, res) => {
         return res.status(500).json({ message: "Server error" });
     }
 };
+
+
+exports.confirmCustomer = asyncHandler(async (req, res) => {
+    const { customerId } = req.params;
+    
+    // Find the customer by customerId
+    const customer = await CustomerModel.findOne({ customerId });
+    if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+    }
+
+    // Update the confirmation status
+    customer.isConfirmed = true;
+    await customer.save();
+
+    res.status(200).json({ message: "Customer account confirmed successfully." });
+});

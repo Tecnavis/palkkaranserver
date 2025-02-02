@@ -28,6 +28,8 @@ router.delete("/:id/addresses/:addressIndex", Controller.deleteCustomerAddress);
 router.put("/:id/addresses/:addressIndex", Controller.editCustomerAddress);
 router.put("/change-password/:id", Controller.changePassword);
 router.put("/customerdetails/:id", Controller.updateCustomerDetails);
+router.get('/confirm/:customerId', Controller.confirmCustomer);
+
 
 // router.post('/forget-password', Controller.sendOTP);
 

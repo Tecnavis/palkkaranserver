@@ -46,6 +46,10 @@ const customerSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    isConfirmed: {
+        type: Boolean,
+        default: false
+    }
 
     // otp: { type: Number }, // OTP for password reset
     // otpExpires: { type: Date } // OTP expiration time
