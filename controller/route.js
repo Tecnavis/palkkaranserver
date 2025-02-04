@@ -10,22 +10,25 @@ exports.create = async (req, res) => {
             return res.status(400).json({ message: "Invalid input data" });
         }
 
-        // Validate product IDs
-        const productList = await Product.find({ _id: { $in: products.map(p => p.productId) } });
+        let route = await Route.findOne({ name });
 
-        if (productList.length !== products.length) {
-            return res.status(404).json({ message: "Some products not found" });
+        if (!route) {
+            // Create a new route if it doesn't exist
+            route = new Route({ name, products: [] });
         }
 
-        // Create the route with selected products and their route-specific prices
-        const newRoute = new Route({ 
-            name, 
-            products: products.map(p => ({ productId: p.productId, routePrice: p.price }))
+        // Update existing products or add new ones
+        products.forEach(({ productId, price }) => {
+            const existingProduct = route.products.find(p => p.productId.toString() === productId);
+            if (existingProduct) {
+                existingProduct.routePrice = price; // Update price if product exists
+            } else {
+                route.products.push({ productId, routePrice: price }); // Add new product
+            }
         });
 
-        await newRoute.save();
-
-        res.status(201).json({ message: "Route created successfully", route: newRoute });
+        await route.save();
+        res.status(201).json({ message: "Products saved successfully", route });
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
