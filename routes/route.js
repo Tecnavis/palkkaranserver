@@ -9,4 +9,5 @@ router.get('/:id',Controller.get)
 router.put('/:id',Controller.update)
 router.delete('/:id',Controller.delete)
 router.delete('/',Controller.deleteAll)
+router.get('/name/:name',Controller.getRoute)
 module.exports = router;

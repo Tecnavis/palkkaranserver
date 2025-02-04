@@ -4,6 +4,7 @@ const routeSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
+        trim: true
     },
     products: [{
         productId: {

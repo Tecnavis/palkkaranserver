@@ -120,3 +120,19 @@ exports.deleteAll = async (req, res) => {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
+
+//get allproduct by route name
+exports.getRoute =  async (req, res) => {
+    try {
+        const { name } = req.params;
+        const route = await Route.findOne({ name }).populate("products.productId");
+
+        if (!route) {
+            return res.status(404).json({ message: "Route not found" });
+        }
+
+        res.status(200).json(route);
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+    }
+};
