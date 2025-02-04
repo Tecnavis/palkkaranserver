@@ -37,12 +37,14 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
     try {
-        const routes = await Route.find();
+        const routes = await Route.find().populate("products.productId");
+
         res.status(200).json({ routes });
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
+
 
 exports.get = async (req, res) => {
     try {
