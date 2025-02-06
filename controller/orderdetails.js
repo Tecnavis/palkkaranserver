@@ -6,12 +6,16 @@ const asyncHandler = require("express-async-handler");
 // Create an order
 exports.createOrder = async (req, res) => {
     try {
-        const { customerId, productItems, planId, paymentMethod, newAddress } = req.body;
+        const { customerId, productItems, planId, paymentMethod, newAddress,routeprice } = req.body;
 
         // Validate customer
         const customer = await Customer.findById(customerId);
         if (!customer) {
             return res.status(404).json({ error: "Customer not found" });
+        }
+        //route price
+        if(!routeprice){
+            return res.status(400).json({ error: "Route price not found" });
         }
 
         // Determine the address to use
@@ -74,6 +78,7 @@ exports.createOrder = async (req, res) => {
         // Create the order
         const newOrder = new OrderProduct({
             customer: customerId,
+            routeprice,
             productItems: validatedProductItems.map((item) => ({
                 product: item.product,
                 quantity: item.quantity,
