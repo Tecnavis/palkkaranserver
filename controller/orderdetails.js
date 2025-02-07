@@ -333,3 +333,116 @@ exports.stopPlan = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+
+const mongoose = require("mongoose");
+
+exports.changePlan = async (req, res) => {
+    const { orderId, newPlanType, customDates, weeklyDays, interval, startDate } = req.body;
+
+    try {
+        const order = await OrderProduct.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        // Retain only previous dates before the change
+        const previousDates = order.selectedPlanDetails.dates
+            .filter(d => new Date(d.date) < new Date())
+            .map(d => ({
+                date: new Date(d.date).setUTCHours(0, 0, 0, 0), // Normalize date
+                status: d.status,
+            }));
+
+        let newDates = [];
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0); // Normalize today
+
+        switch (newPlanType) {
+            case "daily":
+            case "monthly":
+                newDates = Array.from({ length: 30 }, (_, i) => {
+                    let date = new Date();
+                    date.setDate(today.getDate() + i);
+                    date.setUTCHours(0, 0, 0, 0); // Normalize
+                    return date;
+                });
+                break;
+
+            case "custom":
+                if (!customDates || !Array.isArray(customDates)) {
+                    return res.status(400).json({ message: "Invalid custom dates" });
+                }
+                newDates = customDates.map(date => {
+                    let d = new Date(date);
+                    d.setUTCHours(0, 0, 0, 0); // Normalize
+                    return d;
+                });
+                break;
+
+            case "weekly":
+                if (!weeklyDays || !Array.isArray(weeklyDays)) {
+                    return res.status(400).json({ message: "Invalid weekly days" });
+                }
+                newDates = weeklyDays.map(day => {
+                    const offset = (day - today.getDay() + 7) % 7;
+                    let nextDay = new Date();
+                    nextDay.setDate(today.getDate() + offset);
+                    nextDay.setUTCHours(0, 0, 0, 0); // Normalize
+                    return nextDay;
+                });
+                break;
+
+            case "alternative":
+                if (!startDate || !interval || typeof interval !== "number") {
+                    return res.status(400).json({ message: "Invalid alternative plan details" });
+                }
+                const altStartDate = new Date(startDate);
+                altStartDate.setUTCHours(0, 0, 0, 0);
+                newDates = Array.from({ length: 15 }, (_, i) => {
+                    let nextDate = new Date(altStartDate);
+                    nextDate.setDate(altStartDate.getDate() + i * interval);
+                    nextDate.setUTCHours(0, 0, 0, 0); // Normalize
+                    return nextDate;
+                });
+                break;
+
+            default:
+                return res.status(400).json({ message: "Invalid plan type" });
+        }
+
+        // Remove duplicate dates
+        const uniqueDates = new Map();
+        
+        // Add previous dates to the map
+        previousDates.forEach(({ date, status }) => {
+            uniqueDates.set(date, { date: new Date(date), status });
+        });
+
+        // Add new dates to the map if not already present
+        newDates.forEach(date => {
+            if (!uniqueDates.has(date.getTime())) {
+                uniqueDates.set(date.getTime(), { date, status: "pending" });
+            }
+        });
+
+        // Convert map back to an array
+        order.selectedPlanDetails.planType = newPlanType;
+        order.selectedPlanDetails.dates = Array.from(uniqueDates.values());
+        order.selectedPlanDetails.isActive = true;
+
+        await order.save();
+        res.status(200).json({ message: "Plan updated successfully", order });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+// Example Endpoints
+// Daily Plan: { "orderId": "ORDER_ID", "newPlanType": "daily" }
+// Custom Plan: { "orderId": "ORDER_ID", "newPlanType": "custom", "customDates": ["2025-02-08", "2025-02-09"] }
+// Weekly Plan: { "orderId": "ORDER_ID", "newPlanType": "weekly", "weeklyDays": [1, 3, 5] }
+// Alternative Plan: { "orderId": "ORDER_ID", "newPlanType": "alternative", "startDate": "2025-02-06", "interval": 2 }
+// Monthly Plan: { "orderId": "ORDER_ID", "newPlanType": "monthly" }

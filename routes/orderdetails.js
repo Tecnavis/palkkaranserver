@@ -15,6 +15,7 @@ router.get("/selected-plan/:customerId", orderController.getSelectedPlanByCustom
 // Get product items by customer ID
 router.get("/product-items/:customerId", orderController.getProductItemsByCustomer);
 router.put("/stop-plan/:orderId", orderController.stopPlan);
+router.put("/changeplan", orderController.changePlan)
 
 
 module.exports = router;
