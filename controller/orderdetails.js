@@ -299,3 +299,37 @@ exports.getProductItemsByCustomer = asyncHandler(async (req, res) => {
 });
 
 
+
+exports.stopPlan = async (req, res) => {
+    const { orderId } = req.params;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Ensure only date comparison
+
+    try {
+        const order = await OrderProduct.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        // Check if the plan is already inactive
+        if (!order.planisActive) {
+            return res.status(400).json({ message: "Plan is already stopped" });
+        }
+
+        // Mark plan as inactive
+        order.planisActive = false;
+        order.selectedPlanDetails.isActive = false;
+
+        // Filter dates to show only from start to today
+        order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(dateObj => 
+            new Date(dateObj.date) <= today
+        );
+
+        await order.save();
+
+        res.status(200).json({ message: "Plan stopped successfully", order });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};

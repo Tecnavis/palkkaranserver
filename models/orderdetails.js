@@ -29,6 +29,8 @@ const orderProductSchema = new mongoose.Schema({
     totalPrice: { type: Number, required: true },
     paymentMethod: { type: String, required: true },
     paymentStatus: { type: String, default: "unpaid" },
+    planisActive:{type: Boolean,
+        default: true, }
 }, { timestamps: true });
 
 module.exports = mongoose.model("OrderProduct", orderProductSchema);
