@@ -162,7 +162,7 @@ exports.getAllOrders = async (req, res) => {
             .populate("customer", "name email phone address routeno customerId") // Populate customer details
             .populate({
                 path: "productItems.product", // Populate product details for each product item
-                select: "name price description productId title category coverimage", // Select specific fields from the Product model
+                select: "name price description productId title category coverimage quantity", // Select specific fields from the Product model
             })
             .populate("plan", "planType"); // Optionally populate plan details
 
