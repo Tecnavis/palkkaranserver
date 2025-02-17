@@ -175,27 +175,42 @@ exports.getAllOrders = async (req, res) => {
 
 exports.getMostOrderedProducts = async (req, res) => {
     try {
-      // Aggregation pipeline to get the most ordered products
       const mostOrderedProducts = await OrderProduct.aggregate([
         { $unwind: "$productItems" }, // Unwind productItems array
-        { $group: {
+        { 
+          $group: {
             _id: "$productItems.product", // Group by product ID
-            totalQuantity: { $sum: "$productItems.quantity" }, // Sum the quantity for each product
+            totalQuantity: { $sum: "$productItems.quantity" }, // Sum total quantity
+            routePrice: { $first: "$routeprice" } // Get route price from OrderProduct
           },
         },
-        { $sort: { totalQuantity: -1 } }, // Sort by total quantity in descending order
-        { $limit: 6 }, // Limit to the top 6 most ordered products
-        { $lookup: {
-            from: "products", // Join with the Product collection
+        { $sort: { totalQuantity: -1 } }, // Sort by total quantity (descending)
+        { $limit: 6 }, // Get top 6 most ordered products
+        { 
+          $lookup: {
+            from: "products", // Join with Product collection
             localField: "_id",
             foreignField: "_id",
-            as: "product", // Alias for joined product data
+            as: "product",
           },
         },
-        { $unwind: "$product" }, // Unwind the product data to simplify the result
-        { $project: {
-            product: 1, // Include the product data
-            totalQuantity: 1, // Include the total quantity
+        { $unwind: "$product" }, // Flatten the product data
+        { 
+          $project: {
+            _id: "$product._id",
+            title: "$product.title",
+            productId: "$product.productId",
+            description: "$product.description",
+            category: "$product.category",
+            coverimage: "$product.coverimage",
+            images: "$product.images",
+            price: "$product.price",
+            discount: "$product.discount",
+            quantity: "$product.quantity",
+            createdAt: "$product.createdAt",
+            updatedAt: "$product.updatedAt",
+            totalQuantity: 1, // Include total quantity
+            routePrice: 1 // Include route price
           },
         },
       ]);

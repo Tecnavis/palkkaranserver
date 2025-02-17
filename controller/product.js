@@ -184,8 +184,6 @@ exports.searchProducts = async (req, res) => {
   }
 };
 
-
-//get random products
 // Get 6 random products
 exports.getPopular = asyncHandler(async (req, res) => {
   const randomProducts = await Product.aggregate([{ $sample: { size: 6 } }]);
