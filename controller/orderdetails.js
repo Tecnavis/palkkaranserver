@@ -298,10 +298,9 @@ exports.getProductItemsByCustomer = asyncHandler(async (req, res) => {
     const { customerId } = req.params;
 
     try {
-        const orders = await OrderProduct.find(
-            { customer: customerId },
-            "productItems"
-        ).populate("productItems.product", "name price"); // Populating product details
+        const orders = await OrderProduct.find({ customer: customerId })
+            .populate("productItems.product", "name price category") // Populate product details
+            .select("productItems quantity routeprice totalPrice paymentMethod address");
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
@@ -312,6 +311,7 @@ exports.getProductItemsByCustomer = asyncHandler(async (req, res) => {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
 });
+
 
 
 
