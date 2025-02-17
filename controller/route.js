@@ -1,6 +1,6 @@
 const Route = require("../models/route");
 const Product = require("../models/product");
-
+const asyncHandler = require("express-async-handler");
 // Create a new route with selected products and store route-specific prices
 exports.create = async (req, res) => {
     try {
@@ -136,3 +136,46 @@ exports.getRoute =  async (req, res) => {
         res.status(500).json({ message: "Server error", error });
     }
 };
+
+//popular product
+
+exports.getPopular = asyncHandler(async (req, res) => {
+    try {
+      // Step 1: Aggregate random routes and unwind products
+      const randomProducts = await Route.aggregate([
+        { $unwind: "$products" }, // Flatten the products array
+        { $sample: { size: 6 } }, // Get 6 random products
+        {
+          $lookup: {
+            from: "products", // The collection name in MongoDB
+            localField: "products.productId",
+            foreignField: "_id",
+            as: "productDetails",
+          },
+        },
+        { $unwind: "$productDetails" }, // Flatten product details
+        {
+          $project: {
+            _id: "$productDetails._id",
+            title: "$productDetails.title",
+            productId: "$productDetails.productId",
+            description: "$productDetails.description",
+            category: "$productDetails.category",
+            coverimage: "$productDetails.coverimage",
+            images: "$productDetails.images",
+            price: "$productDetails.price",
+            discount: "$productDetails.discount",
+            quantity: "$productDetails.quantity",
+            createdAt: "$productDetails.createdAt",
+            updatedAt: "$productDetails.updatedAt",
+            routePrice: "$products.routePrice", // Include route price
+          },
+        },
+      ]);
+  
+      res.status(200).json(randomProducts);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
