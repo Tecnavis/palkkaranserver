@@ -299,7 +299,7 @@ exports.getProductItemsByCustomer = asyncHandler(async (req, res) => {
 
     try {
         const orders = await OrderProduct.find({ customer: customerId })
-            .populate("productItems.product", "name price category") // Populate product details
+            .populate("productItems.product", "name price category").populate("customer", "name email phone customerId") // Populate product details
             .select("productItems quantity routeprice totalPrice paymentMethod address");
 
         if (!orders || orders.length === 0) {
