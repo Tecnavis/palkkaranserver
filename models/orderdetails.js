@@ -3,11 +3,11 @@ const mongoose = require("mongoose");
 const orderProductSchema = new mongoose.Schema({
     customer: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", required: true },
     routeprice: { type: Number, required: true },
-   
     productItems: [
         {
             product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
             quantity: { type: Number, required: true },
+            routePrice: { type: Number, required: true },
         },
     ],
     plan: { type: mongoose.Schema.Types.ObjectId, ref: "Plan" },
@@ -29,8 +29,8 @@ const orderProductSchema = new mongoose.Schema({
     totalPrice: { type: Number, required: true },
     paymentMethod: { type: String, required: true },
     paymentStatus: { type: String, default: "unpaid" },
-    planisActive:{type: Boolean,
-        default: true, }
+    planisActive: { type: Boolean, default: true },
 }, { timestamps: true });
+
 
 module.exports = mongoose.model("OrderProduct", orderProductSchema);

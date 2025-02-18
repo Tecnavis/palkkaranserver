@@ -6,27 +6,17 @@ const asyncHandler = require("express-async-handler");
 // Create an order
 exports.createOrder = async (req, res) => {
     try {
-        const { customerId, productItems, planId, paymentMethod, newAddress,routeprice } = req.body;
+        const { customerId, productItems, planId, paymentMethod, newAddress } = req.body;
 
         // Validate customer
         const customer = await Customer.findById(customerId);
         if (!customer) {
             return res.status(404).json({ error: "Customer not found" });
         }
-        //route price
-        if(!routeprice){
-            return res.status(400).json({ error: "Route price not found" });
-        }
 
         // Determine the address to use
-        let orderAddress = null;
-        if (newAddress) {
-            // If a new address is provided, use it
-            orderAddress = newAddress;
-        } else if (customer.address.length > 0) {
-            // Use the first address from the customer's saved addresses as the default
-            orderAddress = customer.address[0];
-        } else {
+        let orderAddress = newAddress || (customer.address.length > 0 ? customer.address[0] : null);
+        if (!orderAddress) {
             return res.status(400).json({ error: "No address available for this customer" });
         }
 
@@ -35,22 +25,26 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ error: "Product items cannot be empty" });
         }
 
-        // Validate and fetch product details
-        const validatedProductItems = [];
-        for (const item of productItems) {
-            const product = await Product.findById(item.productId);
-            if (!product) {
-                return res.status(404).json({ error: `Product not found: ${item.productId}` });
-            }
+        // Create validated product items with route prices
+        const validatedProductItems = await Promise.all(
+            productItems.map(async (item) => {
+                const product = await Product.findById(item.productId);
+                if (!product) {
+                    throw new Error(`Product not found: ${item.productId}`);
+                }
+                return {
+                    product: item.productId,
+                    quantity: item.quantity,
+                    routePrice: item.routePrice // Use the route price from the request
+                };
+            })
+        );
 
-            validatedProductItems.push({
-                product: product._id,
-                quantity: item.quantity,
-                name: product.name,
-                price: product.price,
-                lineTotal: product.price * item.quantity,
-            });
-        }
+        // Calculate total price from route prices
+        const totalRoutePrice = validatedProductItems.reduce(
+            (sum, item) => sum + (item.routePrice * item.quantity),
+            0
+        );
 
         // Validate plan (optional)
         let selectedPlanDetails = null;
@@ -59,51 +53,35 @@ exports.createOrder = async (req, res) => {
             if (!plan) {
                 return res.status(404).json({ error: "Plan not found" });
             }
-
-            const datesWithStatus = plan.dates.map((date) => ({
-                date,
-                status: "pending",
-            }));
-
             selectedPlanDetails = {
                 planType: plan.planType,
-                dates: datesWithStatus,
+                dates: plan.dates.map(date => ({ date, status: "pending" })),
                 isActive: plan.isActive,
             };
         }
 
-        // Calculate total price
-        const totalPrice = validatedProductItems.reduce((sum, item) => sum + item.lineTotal, 0);
-
         // Create the order
         const newOrder = new OrderProduct({
             customer: customerId,
-            routeprice,
-            productItems: validatedProductItems.map((item) => ({
-                product: item.product,
-                quantity: item.quantity,
-            })),
+            routeprice: totalRoutePrice,
+            productItems: validatedProductItems,
             plan: planId || null,
             selectedPlanDetails,
-            totalPrice,
+            totalPrice: totalRoutePrice,
             paymentMethod,
             paymentStatus: "unpaid",
-            address: orderAddress, // Include the selected or new address in the order
+            address: orderAddress,
         });
 
         await newOrder.save();
 
-        // Respond with success
         res.status(201).json({
             message: "Order created successfully",
-            order: {
-                ...newOrder.toObject(),
-                productItems: validatedProductItems, // Return detailed product items
-            },
+            order: newOrder,
         });
     } catch (error) {
         console.error("Error creating order:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: error.message || "Internal server error" });
     }
 };
 
@@ -234,7 +212,7 @@ exports.getOrdersByCustomerId = async (req, res) => {
                 path: "productItems.product", // Populate product details for each product item
                 select: "name price description", // Select specific fields from the Product model
             })
-            .populate("plan", "planType"); // Optionally populate plan details
+            .populate("plan", "planType").populate("selectedPlanDetails", "planType isActive dates status"); // Optionally populate plan details
 
         if (!orders.length) {
             return res.status(404).json({ message: "No orders found for this customer" });
@@ -299,7 +277,7 @@ exports.getProductItemsByCustomer = asyncHandler(async (req, res) => {
 
     try {
         const orders = await OrderProduct.find({ customer: customerId })
-            .populate("productItems.product", "name price category").populate("customer", "name email phone customerId") // Populate product details
+            .populate("productItems.product", "name price category routerPrice").populate("customer", "name email phone customerId").populate("selectedPlanDetails", "planType isActive dates status").populate("plan", "planType")// Populate product details
             .select("productItems quantity routeprice totalPrice paymentMethod address");
 
         if (!orders || orders.length === 0) {
