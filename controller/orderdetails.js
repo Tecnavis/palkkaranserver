@@ -3,6 +3,10 @@ const Product = require("../models/product");
 const Plan = require("../models/plans");
 const Customer = require("../models/customer");
 const asyncHandler = require("express-async-handler");
+const nodemailer = require("nodemailer");
+
+require('dotenv').config(); 
+
 // Create an order
 exports.createOrder = async (req, res) => {
     try {
@@ -431,6 +435,45 @@ exports.changePlan = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+
+
+
+exports.sendInvoiceEmail = async (req, res) => {
+  try {
+    const { email, invoiceHtml } = req.body;
+
+    if (!email || !invoiceHtml) {
+      return res.status(400).json({ message: "Email and invoice data are required" });
+    }
+
+    // Configure Nodemailer
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL, // Your email
+        pass: process.env.PASSWORD, // Your email password or app password
+      },
+    });
+
+    // Email options
+    const mailOptions = {
+      from: process.env.EMAIL,
+      to: email,
+      subject: "Your Invoice from Palkkaran",
+      html: invoiceHtml,
+    };
+
+    // Send email
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: "Invoice sent successfully" });
+  } catch (error) {
+    console.error("Error sending invoice:", error);
+    res.status(500).json({ message: "Failed to send invoice", error });
+  }
+};
+
 
 
 // Example Endpoints

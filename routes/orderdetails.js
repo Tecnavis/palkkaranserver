@@ -16,6 +16,7 @@ router.get("/selected-plan/:customerId", orderController.getSelectedPlanByCustom
 router.get("/product-items/:customerId", orderController.getProductItemsByCustomer);
 router.put("/stop-plan/:orderId", orderController.stopPlan);
 router.put("/changeplan", orderController.changePlan)
+router.post("/send-invoice",orderController.sendInvoiceEmail);
 
 
 module.exports = router;
