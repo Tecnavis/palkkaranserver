@@ -406,7 +406,7 @@ exports.updateCustomerImage = async (req, res) => {
         const imagePath = req.file.path;
 
         // Find the customer
-        const customer = await Customer.findOne({ customerId });
+        const customer = await CustomerModel.findOne({ customerId });
         if (!customer) {
             return res.status(404).json({ message: "Customer not found." });
         }
