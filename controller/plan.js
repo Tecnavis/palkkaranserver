@@ -174,7 +174,7 @@ exports.getPlansByCustomerId = async (req, res) => {
 
 // Apply leave for a specific plan
 exports.applyLeave = async (req, res) => {
-    const { customerId, date } = req.body;
+    const { customerId, dates } = req.body; // Expecting an array of dates
 
     try {
         const plan = await Plan.findOne({ customer: customerId, isActive: true });
@@ -183,14 +183,20 @@ exports.applyLeave = async (req, res) => {
             return res.status(404).json({ message: "No active plan found for this customer" });
         }
 
-        const leaveDate = new Date(date);
+        // Convert incoming dates to Date objects
+        const leaveDates = dates.map(date => new Date(date));
 
-        // Check if the date is already in the leave array
-        if (plan.leaves.some((leave) => leave.toISOString() === leaveDate.toISOString())) {
-            return res.status(400).json({ message: "Leave already applied for this date" });
+        // Filter out dates that are already in the leaves array
+        const newLeaveDates = leaveDates.filter(
+            leaveDate => !plan.leaves.some(existingDate => existingDate.toISOString() === leaveDate.toISOString())
+        );
+
+        if (newLeaveDates.length === 0) {
+            return res.status(400).json({ message: "Leave already applied for the selected dates" });
         }
 
-        plan.leaves.push(leaveDate);
+        // Add new leave dates
+        plan.leaves.push(...newLeaveDates);
         await plan.save();
 
         res.status(200).json({ message: "Leave applied successfully", plan });
