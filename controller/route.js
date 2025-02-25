@@ -183,49 +183,44 @@ exports.getPopular = asyncHandler(async (req, res) => {
 
 
   //search product
+  
   exports.searchProducts = async (req, res) => {
       try {
           const { query } = req.params;
   
-          // Find products that match the search criteria
-          const products = await Product.find({
-              $or: [
-                  { category: { $regex: query, $options: "i" } },
-                  { title: { $regex: query, $options: "i" } },
-                  { name: { $regex: query, $options: "i" } },
-                  { description: { $regex: query, $options: "i" } }
-              ]
-          });
+          // Find routes that contain products matching the search query
+          const routes = await Route.find()
+              .populate({
+                  path: "products.productId",
+                  match: {
+                      $or: [
+                          { category: { $regex: query, $options: "i" } },
+                          { title: { $regex: query, $options: "i" } },
+                          { name: { $regex: query, $options: "i" } },
+                          { description: { $regex: query, $options: "i" } }
+                      ]
+                  }
+              });
   
-          if (!products.length) {
+          // Filter out routes that have no matching products
+          const filteredRoutes = routes
+              .map(route => {
+                  const matchingProducts = route.products.filter(p => p.productId);
+                  return matchingProducts.length ? { 
+                      routeName: route.name, 
+                      products: matchingProducts.map(p => ({
+                          productDetails: p.productId,
+                          routePrice: p.routePrice
+                      }))
+                  } : null;
+              })
+              .filter(route => route !== null);
+  
+          if (!filteredRoutes.length) {
               return res.status(404).json({ message: "No products found" });
           }
   
-          const productIds = products.map((product) => product._id);
-  
-          // Find routes containing the matching products and populate product details
-          const routes = await Route.find({ "products.productId": { $in: productIds } })
-              .populate({
-                  path: "products.productId",
-                  model: "Product"
-              });
-  
-          // Format response to include route details with product information
-          const result = routes.map((route) => ({
-              routeName: route.name,
-              products: route.products
-                  .filter((p) => productIds.includes(p.productId._id))
-                  .map((p) => ({
-                      productId: p.productId._id,
-                      productName: p.productId.name,
-                      category: p.productId.category,
-                      title: p.productId.title,
-                      description: p.productId.description,
-                      routePrice: p.routePrice
-                  }))
-          }));
-  
-          res.status(200).json(result);
+          res.status(200).json(filteredRoutes);
       } catch (error) {
           res.status(500).json({ message: "Server error", error });
       }
