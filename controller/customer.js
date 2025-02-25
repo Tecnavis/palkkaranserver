@@ -395,26 +395,35 @@ exports.confirmCustomer = asyncHandler(async (req, res) => {
 //proof image add
 
 exports.updateCustomerImage = async (req, res) => {
-    const { customerId } = req.params;
-    const { image } = req.body;
-
     try {
-        // Find customer by ID and update the image field
-        const updatedCustomer = await Customer.findOneAndUpdate(
-            { customerId },
-            { image },
-            { new: true }
-        );
+        const { customerId } = req.params;
 
-        if (!updatedCustomer) {
-            return res.status(404).json({ message: "Customer not found" });
+        if (!req.file) {
+            return res.status(400).json({ message: "Image file is required." });
         }
 
-        res.status(200).json({
-            message: "Customer image updated successfully",
-            customer: updatedCustomer
-        });
+        // Get the uploaded file path
+        const imagePath = req.file.path;
 
+        // Find the customer
+        const customer = await Customer.findOne({ customerId });
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found." });
+        }
+
+        // Delete the old image if it exists
+        if (customer.image) {
+            const oldImagePath = path.join(__dirname, "../uploads", customer.image);
+            if (fs.existsSync(oldImagePath)) {
+                fs.unlinkSync(oldImagePath);
+            }
+        }
+
+        // Update customer image
+        customer.image = imagePath;
+        await customer.save();
+
+        res.status(200).json({ message: "Customer image updated successfully", image: imagePath });
     } catch (error) {
         console.error("Error updating customer image:", error);
         res.status(500).json({ message: "Internal server error" });
