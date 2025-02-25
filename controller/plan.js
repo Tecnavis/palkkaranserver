@@ -67,7 +67,8 @@ exports.createPlan = async (req, res) => {
             case "monthly":
                 dates = calculateMonthlyDates();
                 break;
-
+                case "none":
+                    break;                
             default:
                 return res.status(400).json({ message: "Invalid plan type" });
         }
