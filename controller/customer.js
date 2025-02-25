@@ -183,6 +183,8 @@ exports.login = asyncHandler(async (req, res) => {
             userPhone: customer.phone,
             address: customer.address,
             location: customer.location,
+            routeno: customer.routeno||"",
+            routename: customer.routename||""
         },
     });
 });
