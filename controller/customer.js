@@ -403,20 +403,12 @@ exports.updateCustomerImage = async (req, res) => {
         }
 
         // Get the uploaded file path
-        const imagePath = req.file.path;
+        const imagePath = req.file.filename;
 
         // Find the customer
         const customer = await CustomerModel.findOne({ customerId });
         if (!customer) {
             return res.status(404).json({ message: "Customer not found." });
-        }
-
-        // Delete the old image if it exists
-        if (customer.image) {
-            const oldImagePath = path.join(__dirname, "../uploads", customer.image);
-            if (fs.existsSync(oldImagePath)) {
-                fs.unlinkSync(oldImagePath);
-            }
         }
 
         // Update customer image
