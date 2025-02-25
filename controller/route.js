@@ -141,36 +141,40 @@ exports.getRoute =  async (req, res) => {
 
 exports.getPopular = async (req, res) => {
     try {
-        // Fetch all routes with populated product details
-        const routes = await Route.find().populate("products.productId");
+        // Fetch all routes and populate productId details
+        const routes = await Route.find().populate({
+            path: "products.productId",
+            select: "title productId description category coverimage images price discount quantity productIdCounter createdAt updatedAt"
+        });
+
+        if (!routes.length) {
+            return res.status(404).json({ message: "No routes found" });
+        }
 
         // Extract all products with route details
         let allProducts = [];
         routes.forEach(route => {
-            route.products.forEach(p => {
-                if (p.productId) {
-                    allProducts.push({
-                        routeName: route.name,
-                        productDetails: p.productId,
-                        routePrice: p.routePrice
-                    });
-                }
-            });
+            const routeData = {
+                _id: route._id,
+                name: route.name,
+                products: route.products.map(p => ({
+                    productId: p.productId,
+                    routePrice: p.routePrice,
+                    _id: p._id
+                }))
+            };
+            allProducts.push(routeData);
         });
 
-        // Shuffle and get 6 random products
+        // Shuffle and get 6 random routes
         const shuffledProducts = allProducts.sort(() => 0.5 - Math.random()).slice(0, 6);
-
-        if (!shuffledProducts.length) {
-            return res.status(404).json({ message: "No products found" });
-        }
 
         res.status(200).json(shuffledProducts);
     } catch (error) {
+        console.error("Error fetching random products:", error);
         res.status(500).json({ message: "Server error", error });
     }
 };
-
 
 
   //search product
