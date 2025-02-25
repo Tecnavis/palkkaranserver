@@ -9,6 +9,7 @@ const planSchema = new mongoose.Schema({
     planType: {
         type: String,
         enum: ["daily", "custom", "weekly", "alternative", "monthly","none"],
+        
         required: true
     },
     dates: {
