@@ -240,3 +240,81 @@ exports.getPopular = async (req, res) => {
       }
   };
   
+
+
+
+  //get allproduct by category name
+
+
+
+exports.getRouteProductsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+
+    // Validate category parameter
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category parameter is required'
+      });
+    }
+
+    // Aggregate pipeline to find route products by category
+    const routeProductsByCategory = await Route.aggregate([
+      // Unwind the products array to get individual products
+      { $unwind: "$products" },
+      // Lookup to get the product details
+      {
+        $lookup: {
+          from: "products", // Collection name for products
+          localField: "products.productId",
+          foreignField: "_id",
+          as: "productDetails"
+        }
+      },
+      // Unwind the productDetails array
+      { $unwind: "$productDetails" },
+      // Match documents by category
+      {
+        $match: {
+          "productDetails.category": category
+        }
+      },
+      // Group back by route
+      {
+        $group: {
+          _id: "$_id",
+          name: { $first: "$name" },
+          products: {
+            $push: {
+              productId: "$productDetails",
+              routePrice: "$products.routePrice",
+              _id: "$products._id"
+            }
+          }
+        }
+      }
+    ]);
+
+    if (routeProductsByCategory.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No route products found for category: ${category}`
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: routeProductsByCategory.length,
+      data: routeProductsByCategory
+    });
+  } catch (error) {
+    console.error('Error fetching route products by category:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch route products by category',
+      error: error.message
+    });
+  }
+};
+
