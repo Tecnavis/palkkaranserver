@@ -141,41 +141,60 @@ exports.getRoute =  async (req, res) => {
 
 exports.getPopular = async (req, res) => {
     try {
-        // Fetch all routes and populate productId details
-        const routes = await Route.find().populate({
-            path: "products.productId",
-            select: "title productId description category coverimage images price discount quantity productIdCounter createdAt updatedAt"
-        });
-
-        if (!routes.length) {
-            return res.status(404).json({ message: "No routes found" });
-        }
-
-        // Extract all products with route details
-        let allProducts = [];
-        routes.forEach(route => {
-            route.products.forEach(product => {
-                if (product.productId) {
-                    allProducts.push({
-                        routeId: route._id,
-                        routeName: route.name,
-                        routePrice: product.routePrice,
-                        productDetails: product.productId
-                    });
-                }
-            });
-        });
-
-        // Shuffle and get 6 random products
-        const shuffledProducts = allProducts.sort(() => 0.5 - Math.random()).slice(0, 6);
-
-        res.status(200).json(shuffledProducts);
+      // Aggregate pipeline to get random route products
+      const randomRouteProducts = await Route.aggregate([
+        // Unwind the products array to get individual products
+        { $unwind: "$products" },
+        // Lookup to get the product details
+        {
+          $lookup: {
+            from: "products", // Assuming your product collection is named "products"
+            localField: "products.productId",
+            foreignField: "_id",
+            as: "productDetails"
+          }
+        },
+        // Unwind the productDetails array
+        { $unwind: "$productDetails" },
+        // Project only the needed fields
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            "products.routePrice": 1,
+            "products._id": 1,
+            productDetails: 1
+          }
+        },
+        // Get random documents
+        { $sample: { size: 6 } }
+      ]);
+  
+      // Format the response
+      const formattedResponse = randomRouteProducts.map(item => ({
+        _id: item._id,
+        name: item.name,
+        products: [{
+          productId: item.productDetails,
+          routePrice: item.products.routePrice,
+          _id: item.products._id
+        }]
+      }));
+  
+      res.status(200).json({
+        success: true,
+        count: formattedResponse.length,
+        data: formattedResponse
+      });
     } catch (error) {
-        console.error("Error fetching random products:", error);
-        res.status(500).json({ message: "Server error", error });
+      console.error('Error fetching random route products:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch random route products',
+        error: error.message
+      });
     }
-};
-
+  };
 
   //search product
   
