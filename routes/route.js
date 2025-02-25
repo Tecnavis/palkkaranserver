@@ -11,4 +11,5 @@ router.delete('/:id',Controller.delete)
 router.delete('/',Controller.deleteAll)
 router.get('/name/:name',Controller.getRoute)
 router.get('/popular/product',Controller.getPopular)
+router.get("/search/:query",Controller.searchProducts);
 module.exports = router;
