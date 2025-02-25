@@ -29,7 +29,7 @@ router.put("/:id/addresses/:addressIndex", Controller.editCustomerAddress);
 router.put("/change-password/:id", Controller.changePassword);
 router.put("/customerdetails/:id", Controller.updateCustomerDetails);
 router.get('/confirm/:customerId', Controller.confirmCustomer);
-router.put("/update-image/:customerId", Controller.updateCustomerImage);
+router.put("/update-image/:customerId", upload.single("image"), Controller.updateCustomerImage);
 // router.post('/forget-password', Controller.sendOTP);
 
 // // Route to verify OTP and reset password
