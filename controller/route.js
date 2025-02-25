@@ -141,44 +141,48 @@ exports.getRoute =  async (req, res) => {
 
 exports.getPopular = asyncHandler(async (req, res) => {
     try {
-      // Step 1: Aggregate random routes and unwind products
-      const randomProducts = await Route.aggregate([
-        { $unwind: "$products" }, // Flatten the products array
-        { $sample: { size: 6 } }, // Get 6 random products
-        {
-          $lookup: {
-            from: "products", // The collection name in MongoDB
-            localField: "products.productId",
-            foreignField: "_id",
-            as: "productDetails",
-          },
-        },
-        { $unwind: "$productDetails" }, // Flatten product details
-        {
-          $project: {
-            _id: "$productDetails._id",
-            title: "$productDetails.title",
-            productId: "$productDetails.productId",
-            description: "$productDetails.description",
-            category: "$productDetails.category",
-            coverimage: "$productDetails.coverimage",
-            images: "$productDetails.images",
-            price: "$productDetails.price",
-            discount: "$productDetails.discount",
-            quantity: "$productDetails.quantity",
-            createdAt: "$productDetails.createdAt",
-            updatedAt: "$productDetails.updatedAt",
-            routePrice: "$products.routePrice", // Include route price
-          },
-        },
-      ]);
-  
-      res.status(200).json(randomProducts);
+        // Step 1: Aggregate popular products based on quantity sold or order count
+        const popularProducts = await Route.aggregate([
+            { $unwind: "$products" }, // Flatten the products array
+            {
+                $lookup: {
+                    from: "products", // The collection name in MongoDB
+                    localField: "products.productId",
+                    foreignField: "_id",
+                    as: "productDetails",
+                },
+            },
+            { $unwind: "$productDetails" }, // Flatten product details
+            { 
+                $sort: { "productDetails.quantity": -1 } // Sort by highest quantity (assuming it's a measure of popularity)
+            },
+            { $limit: 6 }, // Get the top 6 popular products
+            {
+                $project: {
+                    _id: "$productDetails._id",
+                    title: "$productDetails.title",
+                    name: "$name", // Route name
+                    productId: "$productDetails.productId",
+                    description: "$productDetails.description",
+                    category: "$productDetails.category",
+                    coverimage: "$productDetails.coverimage",
+                    images: "$productDetails.images",
+                    price: "$productDetails.price",
+                    discount: "$productDetails.discount",
+                    quantity: "$productDetails.quantity",
+                    createdAt: "$productDetails.createdAt",
+                    updatedAt: "$productDetails.updatedAt",
+                    routePrice: "$products.routePrice", // Include route price
+                },
+            },
+        ]);
+
+        res.status(200).json(popularProducts);
     } catch (error) {
-      res.status(500).json({ message: error.message });
+        res.status(500).json({ message: error.message });
     }
-  });
-  
+});
+
 
 
 
