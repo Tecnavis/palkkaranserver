@@ -154,19 +154,19 @@ exports.getPopular = async (req, res) => {
         // Extract all products with route details
         let allProducts = [];
         routes.forEach(route => {
-            const routeData = {
-                _id: route._id,
-                name: route.name,
-                products: route.products.map(p => ({
-                    productId: p.productId,
-                    routePrice: p.routePrice,
-                    _id: p._id
-                }))
-            };
-            allProducts.push(routeData);
+            route.products.forEach(product => {
+                if (product.productId) {
+                    allProducts.push({
+                        routeId: route._id,
+                        routeName: route.name,
+                        routePrice: product.routePrice,
+                        productDetails: product.productId
+                    });
+                }
+            });
         });
 
-        // Shuffle and get 6 random routes
+        // Shuffle and get 6 random products
         const shuffledProducts = allProducts.sort(() => 0.5 - Math.random()).slice(0, 6);
 
         res.status(200).json(shuffledProducts);
