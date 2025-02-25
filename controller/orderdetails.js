@@ -6,7 +6,7 @@ const asyncHandler = require("express-async-handler");
 const nodemailer = require("nodemailer");
 
 require('dotenv').config(); 
-//
+
 // Create an order
 exports.createOrder = async (req, res) => {
     try {
@@ -64,13 +64,13 @@ exports.createOrder = async (req, res) => {
             };
         }
 
-        // Create the order without requiring a plan
+        // Create the order
         const newOrder = new OrderProduct({
             customer: customerId,
             routeprice: totalRoutePrice,
             productItems: validatedProductItems,
-            plan: planId || null, // Allow orders without a plan
-            selectedPlanDetails: selectedPlanDetails || null, // Handle null plan details
+            plan: planId || null,
+            selectedPlanDetails,
             totalPrice: totalRoutePrice,
             paymentMethod,
             paymentStatus: "unpaid",
