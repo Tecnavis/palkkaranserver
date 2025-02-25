@@ -390,3 +390,33 @@ exports.confirmCustomer = asyncHandler(async (req, res) => {
 
     res.status(200).json({ message: "Customer account confirmed successfully." });
 });
+
+
+//proof image add
+
+exports.updateCustomerImage = async (req, res) => {
+    const { customerId } = req.params;
+    const { image } = req.body;
+
+    try {
+        // Find customer by ID and update the image field
+        const updatedCustomer = await Customer.findOneAndUpdate(
+            { customerId },
+            { image },
+            { new: true }
+        );
+
+        if (!updatedCustomer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        res.status(200).json({
+            message: "Customer image updated successfully",
+            customer: updatedCustomer
+        });
+
+    } catch (error) {
+        console.error("Error updating customer image:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
