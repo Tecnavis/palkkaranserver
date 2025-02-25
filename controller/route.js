@@ -184,25 +184,50 @@ exports.getPopular = asyncHandler(async (req, res) => {
 
   //search product
   exports.searchProducts = async (req, res) => {
-    try {
-        const { query } = req.params;
-
-        // Perform a case-insensitive search in category, title, product name, or description
-        const products = await Product.find({
-            $or: [
-                { category: { $regex: query, $options: "i" } },
-                { title: { $regex: query, $options: "i" } },
-                { name: { $regex: query, $options: "i" } },
-                { description: { $regex: query, $options: "i" } }
-            ]
-        });
-
-        if (!products.length) {
-            return res.status(404).json({ message: "No products found" });
-        }
-
-        res.status(200).json(products);
-    } catch (error) {
-        res.status(500).json({ message: "Server error", error });
-    }
-};
+      try {
+          const { query } = req.params;
+  
+          // Find products that match the search criteria
+          const products = await Product.find({
+              $or: [
+                  { category: { $regex: query, $options: "i" } },
+                  { title: { $regex: query, $options: "i" } },
+                  { name: { $regex: query, $options: "i" } },
+                  { description: { $regex: query, $options: "i" } }
+              ]
+          });
+  
+          if (!products.length) {
+              return res.status(404).json({ message: "No products found" });
+          }
+  
+          const productIds = products.map((product) => product._id);
+  
+          // Find routes containing the matching products and populate product details
+          const routes = await Route.find({ "products.productId": { $in: productIds } })
+              .populate({
+                  path: "products.productId",
+                  model: "Product"
+              });
+  
+          // Format response to include route details with product information
+          const result = routes.map((route) => ({
+              routeName: route.name,
+              products: route.products
+                  .filter((p) => productIds.includes(p.productId._id))
+                  .map((p) => ({
+                      productId: p.productId._id,
+                      productName: p.productId.name,
+                      category: p.productId.category,
+                      title: p.productId.title,
+                      description: p.productId.description,
+                      routePrice: p.routePrice
+                  }))
+          }));
+  
+          res.status(200).json(result);
+      } catch (error) {
+          res.status(500).json({ message: "Server error", error });
+      }
+  };
+  
