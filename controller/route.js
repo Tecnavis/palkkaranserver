@@ -221,8 +221,8 @@ exports.getPopular = async (req, res) => {
               .map(route => {
                   const matchingProducts = route.products.filter(p => p.productId);
                   return matchingProducts.length ? { 
+                    _id: route._id,
                       routeName: route.name, 
-                      _id: route._id,
                       products: matchingProducts.map(p => ({
                           productDetails: p.productId,
                           routePrice: p.routePrice
