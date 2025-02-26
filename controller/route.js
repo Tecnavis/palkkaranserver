@@ -224,7 +224,7 @@ exports.getPopular = async (req, res) => {
                     _id: route._id,
                       routeName: route.name, 
                       products: matchingProducts.map(p => ({
-                          productDetails: p.productId,
+                          productId: p.productId,
                           routePrice: p.routePrice
                       }))
                   } : null;
