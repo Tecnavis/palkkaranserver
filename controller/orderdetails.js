@@ -74,7 +74,8 @@ exports.createOrder = async (req, res) => {
             paymentMethod,
             paymentStatus: "unpaid",
             address: orderAddress,
-            paidamount: 0
+            paidamount: 0,
+            Total: 0
         });
 
         await newOrder.save();
@@ -282,7 +283,7 @@ exports.getProductItemsByCustomer = asyncHandler(async (req, res) => {
     try {
         const orders = await OrderProduct.find({ customer: customerId })
             .populate("productItems.product", "name price category routerPrice").populate("customer", "name email phone customerId").populate("selectedPlanDetails", "planType isActive dates status").populate("plan", "planType")// Populate product details
-            .select("productItems quantity paidamount totalPrice paymentMethod paymentStatus address");
+            .select("productItems quantity  totalPrice paymentMethod paymentStatus address Total paidamount");
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
