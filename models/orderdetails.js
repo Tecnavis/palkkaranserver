@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const orderProductSchema = new mongoose.Schema({
     customer: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", required: true },
-    routeprice: { type: Number, required: true },
+    // routeprice: { type: Number, required: true },
     productItems: [
         {
             product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
@@ -28,6 +28,7 @@ const orderProductSchema = new mongoose.Schema({
     },
     totalPrice: { type: Number, required: true },
     paymentMethod: { type: String, required: true },
+    paidamount: { type: Number},
     paymentStatus: { type: String, default: "unpaid" },
     planisActive: { type: Boolean, default: true },
 }, { timestamps: true });
