@@ -319,3 +319,57 @@ exports.getRouteProductsByCategory = async (req, res) => {
   }
 };
 
+
+exports.getMostSellingProducts = async (req, res) => {
+  try {
+      // Find routes and populate product details
+      const routes = await Route.aggregate([
+          // Unwind the products array to work with individual products
+          { $unwind: "$products" },
+          // Lookup to get product details
+          {
+              $lookup: {
+                  from: "products",
+                  localField: "products.productId",
+                  foreignField: "_id",
+                  as: "products.productDetails"
+              }
+          },
+          // Unwind the productDetails array
+          {
+              $addFields: {
+                  "products.productDetails": { $arrayElemAt: ["$products.productDetails", 0] }
+              }
+          },
+          // Group back by route
+          {
+              $group: {
+                  _id: "$_id",
+                  name: { $first: "$name" },
+                  products: { 
+                      $push: {
+                          _id: "$products._id",
+                          routePrice: "$products.routePrice",
+                          productId: "$products.productDetails"
+                      }
+                  }
+              }
+          },
+          // Sort by number of products (optional)
+          { $sort: { "products.length": -1 } }
+      ]);
+
+      res.status(200).json({
+          success: true,
+          count: routes.length,
+          data: routes
+      });
+  } catch (error) {
+      console.error('Error fetching most selling products:', error);
+      res.status(500).json({
+          success: false,
+          message: 'Server Error',
+          error: error.message
+      });
+  }
+};

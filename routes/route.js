@@ -13,4 +13,6 @@ router.get('/name/:name',Controller.getRoute)
 router.get('/popular/product',Controller.getPopular)
 router.get("/search/:query",Controller.searchProducts);
 router.get('/category/:category', Controller.getRouteProductsByCategory);
+
+router.get("/most-selling-products",Controller.getMostSellingProducts);
 module.exports = router;
