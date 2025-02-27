@@ -8,57 +8,58 @@ exports.create = asyncHandler(async (req, res) => {
 
   // Validate input fields
   if (!customerId || !productId) {
-    return res.status(400).json({ message: "Please add all fields" });
+      return res.status(400).json({ message: "Please add all fields" });
   }
 
   // Check if the product already exists in the customer's cart
   const existingCartItem = await CustomerCart.findOne({ customerId, productId });
 
   if (existingCartItem) {
-    return res.status(400).json({ message: "Product is already in the cart" });
+      return res.status(400).json({ message: "Product is already in the cart" });
   }
 
-  // Create new cart entry
-  const customerCart = await CustomerCart.create(req.body);
+  // Fetch the route and verify if the product exists inside the route
+  const route = await Route.findOne({ "products.productId": productId }).populate({
+      path: "products.productId",
+      select: "title description category price coverimage" // Selecting necessary product details
+  });
 
-  // Populate the required details
-  const cartWithDetails = await CustomerCart.findById(customerCart._id)
-    .populate({
-      path: 'customerId',
-      select: 'name email' // Select only necessary fields from Customer
-    })
-    .populate({
-      path: 'productId',
-      select: 'name products routePrice',
-      populate: {
-        path: 'products.productId',
-        select: 'category coverimage title routePrice' // Select product name if needed
-      }
-    });
+  if (!route) {
+      return res.status(404).json({ message: "Product not found in any route" });
+  }
 
-  // Extract the correct product details
-  const selectedProduct = cartWithDetails.productId.products.find(
-    (product) => product.productId.toString() === productId
-  );
+  // Find the selected product within the route
+  const selectedProduct = route.products.find(p => p.productId._id.toString() === productId);
 
   if (!selectedProduct) {
-    return res.status(404).json({ message: "Product not found in route" });
+      return res.status(404).json({ message: "Product not found in the specified route" });
   }
+
+  // Create a new cart entry
+  const customerCart = await CustomerCart.create({ customerId, productId: route._id });
+
+  // Fetch customer details
+  const customer = await Customer.findById(customerId).select("name email");
 
   // Construct response
   const response = {
-    _id: cartWithDetails._id,
-    customerDetails: {
-      _id: cartWithDetails.customerId._id,
-      name: cartWithDetails.customerId.name,
-      email: cartWithDetails.customerId.email
-    },
-    product: {
-      productId: selectedProduct.productId._id,
-      routePrice: selectedProduct.routePrice,
-      _id: selectedProduct._id
-    },
-    quantity: cartWithDetails.quantity
+      _id: customerCart._id,
+      customerDetails: {
+          _id: customer._id,
+          name: customer.name,
+          email: customer.email
+      },
+      product: {
+          productId: selectedProduct.productId._id,
+          title: selectedProduct.productId.title,
+          description: selectedProduct.productId.description,
+          category: selectedProduct.productId.category,
+          price: selectedProduct.productId.price,
+          coverimage: selectedProduct.productId.coverimage,
+          routePrice: selectedProduct.routePrice,
+          _id: selectedProduct._id
+      },
+      quantity: customerCart.quantity
   };
 
   res.status(200).json(response);
