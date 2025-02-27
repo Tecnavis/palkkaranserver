@@ -5,50 +5,44 @@ const RouteModel =require("../models/route")
 //customer cart  routes
 exports.create = async (req, res) => {
   try {
-      const { customerId, productId, routeId, quantity } = req.body;
+      const { customerId, routeId, productId, quantity } = req.body;
 
-      if (!customerId || !productId || !routeId) {
-          return res.status(400).json({ message: "customerId, productId, and routeId are required" });
+      // Validate request body
+      if (!customerId || !routeId || !productId) {
+          return res.status(400).json({ message: "customerId, routeId, and productId are required." });
       }
 
-      // Find the route to check if the product exists in it
+      // Find the route and check if the product exists in the route's product list
       const route = await RouteModel.findById(routeId);
       if (!route) {
-          return res.status(404).json({ message: "Route not found" });
+          return res.status(404).json({ message: "Route not found." });
       }
 
-      // Find the product in the route's products array
-      const productInRoute = route.products.find(p => p.productId.toString() === productId);
-      if (!productInRoute) {
-          return res.status(404).json({ message: "Product not found in the route" });
+      const productExists = route.products.find(item => item.productId.toString() === productId);
+      if (!productExists) {
+          return res.status(400).json({ message: "Product not found in the selected route." });
       }
 
-      // Check if the product is already in the customer's cart
-      const existingCartItem = await CustomerCart.findOne({ customerId, productId });
-      if (existingCartItem) {
-          existingCartItem.quantity += quantity || 1;
-          await existingCartItem.save();
-          return res.status(200).json({ message: "Cart updated", cartItem: existingCartItem });
+      // Check if the product already exists in the customer's cart
+      let cartItem = await CustomerCart.findOne({ customerId, productId });
+      if (cartItem) {
+          cartItem.quantity += quantity || 1; // Increment quantity if item exists
+          await cartItem.save();
+      } else {
+          // Create a new cart entry
+          cartItem = new CustomerCart({
+              customerId,
+              productId,
+              quantity: quantity || 1
+          });
+          await cartItem.save();
       }
 
-      // Create a new cart item
-      const newCartItem = new CustomerCart({
-          customerId,
-          productId,
-          quantity: quantity || 1,
-      });
-
-      await newCartItem.save();
-
-      res.status(201).json({ message: "Product added to cart", cartItem: newCartItem });
-
+      res.status(200).json({ message: "Product added to cart successfully.", cartItem });
   } catch (error) {
-      console.error("Error adding to cart:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
-
-
 
 // exports.create = asyncHandler(async (req, res) => {
 //   const { customerId, productId } = req.body;
