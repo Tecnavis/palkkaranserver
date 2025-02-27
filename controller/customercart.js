@@ -1,6 +1,7 @@
 const CustomerCart = require("../models/customercart");
 const asyncHandler = require("express-async-handler");
 const RouteModel =require("../models/route")
+const Customer =require("../models/customer")
 
 //customer cart  routes
 exports.create = async (req, res) => {
@@ -68,18 +69,41 @@ exports.create = async (req, res) => {
 
 
 exports.getByCustomerId = async (req, res) => {
-    try {
-      const customerId = req.params.customerId;
-      const customerCart = await CustomerCart.find({ customerId }).populate('productId');
-      if (!customerCart) {
-        return res.status(404).json({ message: 'Wishlist not found' });
+  try {
+      const { customerId } = req.params;
+
+      const customer = await Customer.findById(customerId);
+      if (!customer) {
+          return res.status(404).json({ message: "Customer not found." });
       }
-      res.json(customerCart);
-    } catch (error) {
-      console.error("Error fetching wishlist:", error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  };
+
+      const cartItems = await CustomerCart.find({ customerId }).populate({
+          path: "productId",
+          populate: {
+              path: "products.productId",
+              model: "Product"
+          }
+      }).populate("customerId");
+
+      res.status(200).json({ customer, cartItems });
+  } catch (error) {
+      res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+// exports.getByCustomerId = async (req, res) => {
+//     try {
+//       const customerId = req.params.customerId;
+//       const customerCart = await CustomerCart.find({ customerId }).populate('productId');
+//       if (!customerCart) {
+//         return res.status(404).json({ message: 'Wishlist not found' });
+//       }
+//       res.json(customerCart);
+//     } catch (error) {
+//       console.error("Error fetching wishlist:", error);
+//       res.status(500).json({ message: 'Server error' });
+//     }
+//   };
 
 
   //delete customer cart
