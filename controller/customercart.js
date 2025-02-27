@@ -65,21 +65,35 @@ exports.create = asyncHandler(async (req, res) => {
 // });
 
 
-exports.getByCustomerId = async (req, res) => {
-    try {
-      const customerId = req.params.customerId;
-      const customerCart = await CustomerCart.find({ customerId }).populate('productId');
-      if (!customerCart) {
-        return res.status(404).json({ message: 'Wishlist not found' });
-      }
-      res.json(customerCart);
-    } catch (error) {
-      console.error("Error fetching wishlist:", error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  };
+exports.getByCustomerId = asyncHandler(async (req, res) => {
+  const { customerId } = req.params;
 
+  // Validate input
+  if (!customerId) {
+      return res.status(400).json({ message: "Customer ID is required" });
+  }
 
+  // Fetch cart items with customer, route, and product details
+  const cartItems = await CustomerCart.find({ customerId })
+      .populate({
+          path: "customerId",
+          select: "name email phone" // Fetch selected customer details
+      })
+      .populate({
+          path: "routeId",
+          select: "name" // Fetch route name
+      })
+      .populate({
+          path: "productId",
+          select: "name price productId image coverimage title description category discount quantity" // Fetch product details
+      });
+
+  if (!cartItems.length) {
+      return res.status(404).json({ message: "No cart items found for this customer" });
+  }
+
+  res.status(200).json(cartItems);
+});
   //delete customer cart
   exports.delete = asyncHandler(async (req, res) => {
     const customerCart = await CustomerCart.findByIdAndDelete(req.params.id);
