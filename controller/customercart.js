@@ -2,27 +2,74 @@ const CustomerCart = require("../models/customercart");
 const asyncHandler = require("express-async-handler");
 
 //customer cart  routes
-exports.create = asyncHandler(async (req, res) => {
-  const { customerId, productId } = req.body;
+exports.create = async (req, res) => {
+  try {
+      const { customerId, productId, routeId, quantity } = req.body;
 
-  // Validate input fields
-  if (!customerId || !productId) {
-      return res.status(400).json({ message: "Please add all fields" });
+      if (!customerId || !productId || !routeId) {
+          return res.status(400).json({ message: "customerId, productId, and routeId are required" });
+      }
+
+      // Find the route to check if the product exists in it
+      const route = await Route.findById(routeId);
+      if (!route) {
+          return res.status(404).json({ message: "Route not found" });
+      }
+
+      // Find the product in the route's products array
+      const productInRoute = route.products.find(p => p.productId.toString() === productId);
+      if (!productInRoute) {
+          return res.status(404).json({ message: "Product not found in the route" });
+      }
+
+      // Check if the product is already in the customer's cart
+      const existingCartItem = await CustomerCart.findOne({ customerId, productId });
+      if (existingCartItem) {
+          existingCartItem.quantity += quantity || 1;
+          await existingCartItem.save();
+          return res.status(200).json({ message: "Cart updated", cartItem: existingCartItem });
+      }
+
+      // Create a new cart item
+      const newCartItem = new CustomerCart({
+          customerId,
+          productId,
+          quantity: quantity || 1,
+      });
+
+      await newCartItem.save();
+
+      res.status(201).json({ message: "Product added to cart", cartItem: newCartItem });
+
+  } catch (error) {
+      console.error("Error adding to cart:", error);
+      res.status(500).json({ message: "Internal server error" });
   }
+};
 
-  // Check if the product already exists in the customer's cart
-  const existingCartItem = await CustomerCart.findOne({ customerId, productId });
 
-  if (existingCartItem) {
-      // If product is already in the cart, send a message
-      return res.status(400).json({ message: "Product is already in the cart" });
-  }
 
-  // If product is not in the cart, add it
-  const customerCart = await CustomerCart.create(req.body);
+// exports.create = asyncHandler(async (req, res) => {
+//   const { customerId, productId } = req.body;
 
-  res.status(200).json(customerCart);
-});
+//   // Validate input fields
+//   if (!customerId || !productId) {
+//       return res.status(400).json({ message: "Please add all fields" });
+//   }
+
+//   // Check if the product already exists in the customer's cart
+//   const existingCartItem = await CustomerCart.findOne({ customerId, productId });
+
+//   if (existingCartItem) {
+//       // If product is already in the cart, send a message
+//       return res.status(400).json({ message: "Product is already in the cart" });
+//   }
+
+//   // If product is not in the cart, add it
+//   const customerCart = await CustomerCart.create(req.body);
+
+//   res.status(200).json(customerCart);
+// });
 
 
 exports.getByCustomerId = async (req, res) => {
