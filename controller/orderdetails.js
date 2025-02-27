@@ -284,7 +284,7 @@ exports.getSelectedPlanByCustomer = asyncHandler(async (req, res) => {
             "selectedPlanDetails plan"
         ).populate({
             path: "plan",
-            select: "-__v dates", // Exclude `__v` field
+            select: "-__v -dates", // Exclude `__v` field
         });
 
         if (!orders || orders.length === 0) {
