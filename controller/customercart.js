@@ -1,5 +1,6 @@
 const CustomerCart = require("../models/customercart");
 const asyncHandler = require("express-async-handler");
+const RouteModel =require("../models/route")
 
 //customer cart  routes
 exports.create = async (req, res) => {
@@ -11,7 +12,7 @@ exports.create = async (req, res) => {
       }
 
       // Find the route to check if the product exists in it
-      const route = await Route.findById(routeId);
+      const route = await RouteModel.findById(routeId);
       if (!route) {
           return res.status(404).json({ message: "Route not found" });
       }
