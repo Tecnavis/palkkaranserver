@@ -66,33 +66,19 @@ exports.create = asyncHandler(async (req, res) => {
 
 
 exports.getByCustomerId = async (req, res) => {
-  try {
+    try {
       const customerId = req.params.customerId;
-
-      const customerCart = await CustomerCart.find({ customerId })
-          .populate('customerId', 'name email phone') // Populate specific fields of Customer
-          .populate({
-              path: 'routeId',
-              select: 'name products', // Selecting only necessary fields
-              populate: {
-                  path: 'products.productId', // Populate products within the route
-                  model: 'Product',
-                  select: 'name price description image' // Customize the fields you need
-              }
-          })
-          .populate('productId', 'name price description image'); // Populate Product details
-
-      if (!customerCart || customerCart.length === 0) {
-          return res.status(404).json({ message: 'Cart is empty or not found' });
+      const customerCart = await CustomerCart.find({ customerId }).populate('productId', 'name price description image'); // Populate Product details
+      ;
+      if (!customerCart) {
+        return res.status(404).json({ message: 'Wishlist not found' });
       }
-
       res.json(customerCart);
-  } catch (error) {
-      console.error("Error fetching cart:", error);
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
       res.status(500).json({ message: 'Server error' });
-  }
-};
-
+    }
+  };
 
 
   //delete customer cart
