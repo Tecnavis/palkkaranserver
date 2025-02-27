@@ -18,12 +18,7 @@ const orderProductSchema = new mongoose.Schema({
                 date: { type: Date, required: true },
                 status: { type: String, default: "pending" },
             },
-            
         ],
-        leaves: {
-            type: [Date], // Dates on which the customer has applied for leave
-            default: [],
-        },
         isActive: { type: Boolean, default: true },
     },
     address: {
