@@ -256,14 +256,36 @@ exports.getOrdersByCustomerId = async (req, res) => {
 
 
   // Get selected plan details by customer ID
-exports.getSelectedPlanByCustomer =  asyncHandler(async (req, res) => {
+// exports.getSelectedPlanByCustomer =  asyncHandler(async (req, res) => {
+//     const { customerId } = req.params;
+
+//     try {
+//         const orders = await OrderProduct.find(
+//             { customer: customerId },
+//             "selectedPlanDetails"
+//         );
+
+//         if (!orders || orders.length === 0) {
+//             return res.status(404).json({ message: "No plan details found for this customer" });
+//         }
+
+//         res.status(200).json(orders);
+//     } catch (error) {
+//         res.status(500).json({ message: "Error fetching selected plan details", error: error.message });
+//     }
+// });
+
+exports.getSelectedPlanByCustomer = asyncHandler(async (req, res) => {
     const { customerId } = req.params;
 
     try {
         const orders = await OrderProduct.find(
             { customer: customerId },
-            "selectedPlanDetails"
-        );
+            "selectedPlanDetails plan"
+        ).populate({
+            path: "plan",
+            select: "-__v", // Exclude `__v` field
+        });
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No plan details found for this customer" });
@@ -275,14 +297,13 @@ exports.getSelectedPlanByCustomer =  asyncHandler(async (req, res) => {
     }
 });
 
-
 // Get product items by customer ID
 exports.getProductItemsByCustomer = asyncHandler(async (req, res) => {
     const { customerId } = req.params;
 
     try {
         const orders = await OrderProduct.find({ customer: customerId })
-            .populate("productItems.product", "name price category routerPrice").populate("customer", "name email phone customerId").populate("selectedPlanDetails", "planType isActive dates status").populate("plan", "planType leaves dates")// Populate product details
+            .populate("productItems.product", "name price category routerPrice").populate("customer", "name email phone customerId").populate("selectedPlanDetails", "planType isActive dates status").populate("plan", "planType leaves ")// Populate product details
             .select("productItems quantity  totalPrice paymentMethod paymentStatus address Total paidamount");
 
         if (!orders || orders.length === 0) {
