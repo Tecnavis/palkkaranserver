@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { ref } = require('pdfkit');
 
 const customerCartSchema = new mongoose.Schema({
     customerId: {
@@ -13,6 +14,7 @@ const customerCartSchema = new mongoose.Schema({
     },
     productId: {
         type: mongoose.Schema.Types.ObjectId,
+        ref:'Product',
         required: true
     },
     routePrice: {

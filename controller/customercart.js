@@ -65,35 +65,36 @@ exports.create = asyncHandler(async (req, res) => {
 // });
 
 
-exports.getByCustomerId = asyncHandler(async (req, res) => {
-  const { customerId } = req.params;
+exports.getByCustomerId = async (req, res) => {
+  try {
+      const customerId = req.params.customerId;
 
-  // Validate input
-  if (!customerId) {
-      return res.status(400).json({ message: "Customer ID is required" });
+      const customerCart = await CustomerCart.find({ customerId })
+          .populate('customerId', 'name email phone') // Populate specific fields of Customer
+          .populate({
+              path: 'routeId',
+              select: 'name products', // Selecting only necessary fields
+              populate: {
+                  path: 'products.productId', // Populate products within the route
+                  model: 'Product',
+                  select: 'name price description image' // Customize the fields you need
+              }
+          })
+          .populate('productId', 'name price description image'); // Populate Product details
+
+      if (!customerCart || customerCart.length === 0) {
+          return res.status(404).json({ message: 'Cart is empty or not found' });
+      }
+
+      res.json(customerCart);
+  } catch (error) {
+      console.error("Error fetching cart:", error);
+      res.status(500).json({ message: 'Server error' });
   }
+};
 
-  // Fetch cart items with customer, route, and product details
-  const cartItems = await CustomerCart.find({ customerId })
-      .populate({
-          path: "customerId",
-          select: "name email phone" // Fetch selected customer details
-      })
-      .populate({
-          path: "routeId",
-          select: "name" // Fetch route name
-      })
-      .populate({
-          path: "productId",
-          select: "name price productId image coverimage title description category discount quantity" // Fetch product details
-      });
 
-  if (!cartItems.length) {
-      return res.status(404).json({ message: "No cart items found for this customer" });
-  }
 
-  res.status(200).json(cartItems);
-});
   //delete customer cart
   exports.delete = asyncHandler(async (req, res) => {
     const customerCart = await CustomerCart.findByIdAndDelete(req.params.id);
