@@ -1,109 +1,43 @@
 const CustomerCart = require("../models/customercart");
 const asyncHandler = require("express-async-handler");
-const RouteModel =require("../models/route")
-const Customer =require("../models/customer")
 
 //customer cart  routes
-exports.create = async (req, res) => {
-  try {
-      const { customerId, routeId, productId, quantity } = req.body;
+exports.create = asyncHandler(async (req, res) => {
+  const { customerId, productId } = req.body;
 
-      // Validate request body
-      if (!customerId || !routeId || !productId) {
-          return res.status(400).json({ message: "customerId, routeId, and productId are required." });
-      }
-
-      // Find the route and check if the product exists in the route's product list
-      const route = await RouteModel.findById(routeId);
-      if (!route) {
-          return res.status(404).json({ message: "Route not found." });
-      }
-
-      const productExists = route.products.find(item => item.productId.toString() === productId);
-      if (!productExists) {
-          return res.status(400).json({ message: "Product not found in the selected route." });
-      }
-
-      // Check if the product already exists in the customer's cart
-      let cartItem = await CustomerCart.findOne({ customerId, productId });
-      if (cartItem) {
-          cartItem.quantity += quantity || 1; // Increment quantity if item exists
-          await cartItem.save();
-      } else {
-          // Create a new cart entry
-          cartItem = new CustomerCart({
-              customerId,
-              productId,
-              quantity: quantity || 1
-          });
-          await cartItem.save();
-      }
-
-      res.status(200).json({ message: "Product added to cart successfully.", cartItem });
-  } catch (error) {
-      res.status(500).json({ message: "Internal Server Error", error: error.message });
+  // Validate input fields
+  if (!customerId || !productId) {
+      return res.status(400).json({ message: "Please add all fields" });
   }
-};
 
-// exports.create = asyncHandler(async (req, res) => {
-//   const { customerId, productId } = req.body;
+  // Check if the product already exists in the customer's cart
+  const existingCartItem = await CustomerCart.findOne({ customerId, productId });
 
-//   // Validate input fields
-//   if (!customerId || !productId) {
-//       return res.status(400).json({ message: "Please add all fields" });
-//   }
+  if (existingCartItem) {
+      // If product is already in the cart, send a message
+      return res.status(400).json({ message: "Product is already in the cart" });
+  }
 
-//   // Check if the product already exists in the customer's cart
-//   const existingCartItem = await CustomerCart.findOne({ customerId, productId });
+  // If product is not in the cart, add it
+  const customerCart = await CustomerCart.create(req.body);
 
-//   if (existingCartItem) {
-//       // If product is already in the cart, send a message
-//       return res.status(400).json({ message: "Product is already in the cart" });
-//   }
-
-//   // If product is not in the cart, add it
-//   const customerCart = await CustomerCart.create(req.body);
-
-//   res.status(200).json(customerCart);
-// });
+  res.status(200).json(customerCart);
+});
 
 
 exports.getByCustomerId = async (req, res) => {
-  try {
-      const { customerId } = req.params;
-
-      const customer = await Customer.findById(customerId);
-      if (!customer) {
-          return res.status(404).json({ message: "Customer not found." });
+    try {
+      const customerId = req.params.customerId;
+      const customerCart = await CustomerCart.find({ customerId }).populate('productId');
+      if (!customerCart) {
+        return res.status(404).json({ message: 'Wishlist not found' });
       }
-
-      const cartItems = await CustomerCart.find({ customerId }).populate({
-          path: "productId",
-          populate: {
-              path: "products.productId",
-              model: "Product"
-          }
-      }).populate("customerId");
-
-      res.status(200).json({ customer, cartItems });
-  } catch (error) {
-      res.status(500).json({ message: "Internal Server Error", error: error.message });
-  }
-};
-
-// exports.getByCustomerId = async (req, res) => {
-//     try {
-//       const customerId = req.params.customerId;
-//       const customerCart = await CustomerCart.find({ customerId }).populate('productId');
-//       if (!customerCart) {
-//         return res.status(404).json({ message: 'Wishlist not found' });
-//       }
-//       res.json(customerCart);
-//     } catch (error) {
-//       console.error("Error fetching wishlist:", error);
-//       res.status(500).json({ message: 'Server error' });
-//     }
-//   };
+      res.json(customerCart);
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  };
 
 
   //delete customer cart
