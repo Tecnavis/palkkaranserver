@@ -11,7 +11,7 @@ router.get('/most-ordered', orderController.getMostOrderedProducts);
 router.delete('/:id', orderController.delete);
 router.get("/:customerId", orderController.getOrdersByCustomerId);
 // Get selected plan details by customer ID
-router.get("/selected-plan/:customerId", orderController.getSelectedPlanByCustomer);
+router.get("/selected-plan/:customerId", orderController.getSelectedPlanByCustomer);//
 // Get product items by customer ID
 router.get("/product-items/:customerId", orderController.getProductItemsByCustomer);
 router.put("/stop-plan/:orderId", orderController.stopPlan);
