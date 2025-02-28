@@ -37,7 +37,8 @@ const customerSchema = new mongoose.Schema({
         type: String
     },
     routeno: {
-        type: String
+       type: mongoose.Schema.Types.ObjectId,
+        ref: "Route"
     },
     routename: {
         type: String

@@ -87,7 +87,7 @@ exports.create = asyncHandler(async (req, res) => {
 
 
 exports.getAll = asyncHandler(async (req, res) => {
-    const customer = await CustomerModel.find();
+    const customer = await CustomerModel.find().populate("Route");
     res.status(200).json(customer);
 })
 
