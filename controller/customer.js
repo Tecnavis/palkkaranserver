@@ -138,7 +138,6 @@ exports.delete = asyncHandler(async (req, res) => {
     // Delete related data
     await Promise.all([
         CustomerCart.deleteMany({ customerId: id }),  // Delete cart details
-        OrderProduct.deleteMany({ customer: id }),  // Delete order details
         Plan.deleteMany({ customer: id })  // Delete customer plans
     ]);
 
