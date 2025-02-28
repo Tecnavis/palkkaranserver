@@ -8,7 +8,6 @@ require('dotenv').config();
 const twilio = require('twilio');
 
 const CustomerCart = require('../models/customercart');
-const OrderProduct = require('../models/orderdetails');
 const Plan = require('../models/plans');
 // Function to generate the next customerId
 const generateCustomerId = async () => {
