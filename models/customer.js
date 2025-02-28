@@ -36,9 +36,9 @@ const customerSchema = new mongoose.Schema({
     location: {
         type: String
     },
-    routeno: {
-       type: mongoose.Schema.Types.ObjectId,
-        ref: "Route"
+    routeno: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: "Route" // Reference the Route model 
     },
     routename: {
         type: String
