@@ -7,7 +7,9 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 const twilio = require('twilio');
 
-
+const CustomerCart = require('../models/customercart');
+const OrderProduct = require('../models/orderdetails');
+const Plan = require('../models/plans');
 // Function to generate the next customerId
 const generateCustomerId = async () => {
     // Get the last customer record
@@ -125,10 +127,26 @@ exports.update = asyncHandler(async (req, res) => {
 
 
 exports.delete = asyncHandler(async (req, res) => {
-    const admin = await CustomerModel.findByIdAndDelete(req.params.id);
-    res.status(200).json({message: "customer deleted"});
-})
+    const { id } = req.params;
 
+    // Check if customer exists
+    const customer = await CustomerModel.findById(id);
+    if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+    }
+
+    // Delete related data
+    await Promise.all([
+        CustomerCart.deleteMany({ customerId: id }),  // Delete cart details
+        OrderProduct.deleteMany({ customer: id }),  // Delete order details
+        Plan.deleteMany({ customer: id })  // Delete customer plans
+    ]);
+
+    // Delete customer
+    await CustomerModel.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Customer and related data deleted successfully" });
+});
 
 
 //delete all customer
