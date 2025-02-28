@@ -63,7 +63,7 @@ exports.create = asyncHandler(async (req, res) => {
         routename,
         email
     });
-
+    customer = await customer.populate("routeno");
     if (customer) {
         // Optionally, send a confirmation email or message here.
         res.status(201).json({
@@ -87,9 +87,12 @@ exports.create = asyncHandler(async (req, res) => {
 
 
 exports.getAll = asyncHandler(async (req, res) => {
-    const customer = await CustomerModel.find().populate("routeno");
+    const customer = await CustomerModel.find()
+        .populate("routeno", "_id name details"); // Adjust fields as needed
+
     res.status(200).json(customer);
-})
+});
+
 
 //get by Id
 exports.get = asyncHandler(async (req, res) => {
