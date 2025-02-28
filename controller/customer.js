@@ -91,12 +91,9 @@ exports.create = asyncHandler(async (req, res) => {
 
 
 exports.getAll = asyncHandler(async (req, res) => {
-    const customer = await CustomerModel.findById(req.params.id).populate("routeno");
-    if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
-    }
+    const customer = await CustomerModel.find().populate("routeno");
     res.status(200).json(customer);
-});
+})
 
 //get by Id
 exports.get = asyncHandler(async (req, res) => {
