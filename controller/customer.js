@@ -6,7 +6,6 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const twilio = require('twilio');
-const RouteModel = require("../models/route");
 
 
 // Function to generate the next customerId
@@ -51,10 +50,7 @@ exports.create = asyncHandler(async (req, res) => {
 
     // Generate a new customerId
     const customerId = await generateCustomerId();
-    const route = await RouteModel.findOne({ name: routeno });
-    if (!route) {
-        return res.status(400).json({ message: "Invalid route number" });
-    }
+
     // Create the new customer; note that isConfirmed is false by default.
     const customer = await CustomerModel.create({
         customerId,
@@ -63,7 +59,7 @@ exports.create = asyncHandler(async (req, res) => {
         phone,
         location,
         address: parsedAddress,
-        routeno:route._id,
+        routeno,
         routename,
         email
     });
@@ -91,7 +87,7 @@ exports.create = asyncHandler(async (req, res) => {
 
 
 exports.getAll = asyncHandler(async (req, res) => {
-    const customer = await CustomerModel.find().populate("routeno");
+    const customer = await CustomerModel.find();
     res.status(200).json(customer);
 })
 
