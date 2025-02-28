@@ -231,30 +231,31 @@ exports.getOrdersByCustomerId = async (req, res) => {
 };
 
   //delete order by orderId
-  exports.delete = asyncHandler(async (req, res) => {
+  exports.delete = async (req, res) => {
     const { id } = req.params;
-  
+
     try {
-      // Check if the order exists
-      const order = await OrderProduct.findById(id);
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-  
-      // Delete the associated plan if it exists
-      if (order.plan) {
-        await Plan.findByIdAndDelete(order.plan);
-      }
-  
-      // Delete the order
-      await OrderProduct.findByIdAndDelete(id);
-  
-      res.status(200).json({ message: "Order and associated plan deleted successfully" });
+        // Check if the order exists
+        const order = await OrderProduct.findById(id);
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        // Check if the order has an associated plan and delete it
+        if (order.plan) {
+            await Plan.findByIdAndDelete(order.plan);
+        }
+
+        // Delete the order
+        await OrderProduct.findByIdAndDelete(id);
+
+        res.status(200).json({ message: "Order and associated plan deleted successfully" });
     } catch (error) {
-      console.error("Error deleting order:", error);
-      res.status(500).json({ message: "Failed to delete the order", error: error.message });
+        console.error("Error deleting order and plan:", error);
+        res.status(500).json({ message: "Failed to delete the order", error: error.message });
     }
-  });
+};
+
 
 
 
