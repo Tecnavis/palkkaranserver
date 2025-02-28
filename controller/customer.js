@@ -168,7 +168,6 @@ exports.login = asyncHandler(async (req, res) => {
                 location: customer.location,
                 routeno: customer.routeno,
                 routename: customer.routename,
-                proofimage: customer.image
             },
         },
         process.env.ACCESS_TOKEN_SECRET,
@@ -185,7 +184,8 @@ exports.login = asyncHandler(async (req, res) => {
             address: customer.address,
             location: customer.location,
             routeno: customer.routeno||"",
-            routename: customer.routename||""
+            routename: customer.routename||"",
+            proofimage: customer.image
         },
     });
 });
