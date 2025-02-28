@@ -179,13 +179,14 @@ exports.login = asyncHandler(async (req, res) => {
         accessToken,
         user: {
             username: customer.name,
-            userId: customer._id,
+            _id: customer._id,
+            UserId: customer.customerId,
             userPhone: customer.phone,
             address: customer.address,
             location: customer.location,
             routeno: customer.routeno||"",
             routename: customer.routename||"",
-            proofimage: customer.image
+            proofimage: customer.image||"",
         },
     });
 });
