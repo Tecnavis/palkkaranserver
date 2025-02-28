@@ -22,24 +22,83 @@ const generateCustomerId = async () => {
     return `CS${baseId}`;
 };
 
+// exports.create = asyncHandler(async (req, res) => {
+//     const { name, password, phone, location, address, routeno, routename, email } = req.body;
+
+//     if (!password || !phone) {
+//         return res.status(400).json({ message: "Please add all required fields" });
+//     }
+
+//     // Validate and parse address
+//     let parsedAddress = [];
+//     if (address) {
+//         try {
+//             parsedAddress = JSON.parse(address);
+//             if (!Array.isArray(parsedAddress)) {
+//                 throw new Error("Address must be an array of objects");
+//             }
+//         } catch (err) {
+//             return res.status(400).json({ message: "Invalid address format. Address must be an array of objects." });
+//         }
+//     }
+
+//     // Check if customer already exists
+//     const customerExists = await CustomerModel.findOne({ phone });
+//     if (customerExists) {
+//         return res.status(400).json({ message: "Phone number already exists" });
+//     }
+
+//     // Generate a new customerId
+//     const customerId = await generateCustomerId();
+
+//     // Create the new customer; note that isConfirmed is false by default.
+//     const customer = await CustomerModel.create({
+//         customerId,
+//         name,
+//         password,
+//         phone,
+//         location,
+//         address: parsedAddress,
+//         routeno,
+//         routename,
+//         email
+//     });
+//     customer = await customer.populate("routeno");
+//     if (customer) {
+//         // Optionally, send a confirmation email or message here.
+//         res.status(201).json({
+//             _id: customer._id,
+//             customerId: customer.customerId,
+//             name: customer.name,
+//             phone: customer.phone,
+//             location: customer.location,
+//             address: customer.address,
+//             routeno: customer.routeno,
+//             routename: customer.routename,
+//             email: customer.email,
+//             message: "Customer created successfully. Please confirm your account to be able to login."
+//         });
+//     } else {
+//         res.status(400).json({ message: "Invalid customer data" });
+//     }
+// });
+
+const mongoose = require("mongoose");
+
 exports.create = asyncHandler(async (req, res) => {
-    const { name, password, phone, location, address, routeno, routename, email } = req.body;
+    const { name, password, phone, location, address, routeno, email } = req.body;
 
     if (!password || !phone) {
         return res.status(400).json({ message: "Please add all required fields" });
     }
 
-    // Validate and parse address
-    let parsedAddress = [];
-    if (address) {
-        try {
-            parsedAddress = JSON.parse(address);
-            if (!Array.isArray(parsedAddress)) {
-                throw new Error("Address must be an array of objects");
-            }
-        } catch (err) {
-            return res.status(400).json({ message: "Invalid address format. Address must be an array of objects." });
+    // Convert routeno to ObjectId if provided
+    let routeObjectId = null;
+    if (routeno) {
+        if (!mongoose.Types.ObjectId.isValid(routeno)) {
+            return res.status(400).json({ message: "Invalid Route ID" });
         }
+        routeObjectId = mongoose.Types.ObjectId(routeno);
     }
 
     // Check if customer already exists
@@ -51,21 +110,19 @@ exports.create = asyncHandler(async (req, res) => {
     // Generate a new customerId
     const customerId = await generateCustomerId();
 
-    // Create the new customer; note that isConfirmed is false by default.
+    // Create the new customer
     const customer = await CustomerModel.create({
         customerId,
         name,
         password,
         phone,
         location,
-        address: parsedAddress,
-        routeno,
-        routename,
+        address,
+        routeno: routeObjectId, // Store as ObjectId
         email
     });
-    customer = await customer.populate("routeno");
+
     if (customer) {
-        // Optionally, send a confirmation email or message here.
         res.status(201).json({
             _id: customer._id,
             customerId: customer.customerId,
@@ -73,16 +130,14 @@ exports.create = asyncHandler(async (req, res) => {
             phone: customer.phone,
             location: customer.location,
             address: customer.address,
-            routeno: customer.routeno,
-            routename: customer.routename,
+            routeno: customer.routeno, // Will store ObjectId
             email: customer.email,
-            message: "Customer created successfully. Please confirm your account to be able to login."
+            message: "Customer created successfully."
         });
     } else {
         res.status(400).json({ message: "Invalid customer data" });
     }
 });
-
 
 
 
