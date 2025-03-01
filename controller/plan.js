@@ -184,34 +184,50 @@ exports.getPlansByCustomerId = async (req, res) => {
 
 // Apply leave for a specific plan
 exports.applyLeave = async (req, res) => {
-    const { customerId, dates } = req.body; // Expecting an array of dates
+    const { customerId, dates } = req.body; // Expecting an array of leave dates
 
     try {
-        const plan = await Plan.findOne({ customer: customerId, isActive: true });
+        // Find all active plans for the customer
+        const plans = await Plan.find({ customer: customerId, isActive: true });
 
-        if (!plan) {
-            return res.status(404).json({ message: "No active plan found for this customer" });
+        if (!plans || plans.length === 0) {
+            return res.status(404).json({ message: "No active plans found for this customer" });
         }
 
         // Convert incoming dates to Date objects
         const leaveDates = dates.map(date => new Date(date));
 
-        // Filter out dates that are already in the leaves array
-        const newLeaveDates = leaveDates.filter(
-            leaveDate => !plan.leaves.some(existingDate => existingDate.toISOString() === leaveDate.toISOString())
-        );
+        let leaveApplied = false;
 
-        if (newLeaveDates.length === 0) {
-            return res.status(400).json({ message: "Leave already applied for the selected dates" });
+        for (let plan of plans) {
+            // Check if any leave date exists in the plan's dates
+            const applicableLeaveDates = leaveDates.filter(leaveDate =>
+                plan.dates.some(planDate => planDate.toISOString() === leaveDate.toISOString())
+            );
+
+            if (applicableLeaveDates.length > 0) {
+                // Filter out dates that are already in the leaves array
+                const newLeaveDates = applicableLeaveDates.filter(
+                    leaveDate => !plan.leaves.some(existingDate => existingDate.toISOString() === leaveDate.toISOString())
+                );
+
+                if (newLeaveDates.length > 0) {
+                    // Add new leave dates
+                    plan.leaves.push(...newLeaveDates);
+                    await plan.save();
+                    leaveApplied = true;
+                }
+            }
         }
 
-        // Add new leave dates
-        plan.leaves.push(...newLeaveDates);
-        await plan.save();
+        if (!leaveApplied) {
+            return res.status(400).json({ message: "No valid leave dates found in any active plan" });
+        }
 
-        res.status(200).json({ message: "Leave applied successfully", plan });
+        res.status(200).json({ message: "Leave applied successfully to relevant plans" });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
