@@ -14,5 +14,7 @@ router.put("/:planId/stop", Controller.stopDailyPlan);
 
 // Route to apply leave
 router.post("/leave", Controller.applyLeave);
+//delete plan by id 
+router.delete("/:id", Controller.deletePlan);
 
 module.exports = router;

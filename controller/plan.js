@@ -302,3 +302,19 @@ exports.applyLeave = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+//delete plan by id
+
+exports.deletePlan = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const deletedPlan = await Plan.findByIdAndDelete(id);
+        if (!deletedPlan) {
+            return res.status(404).json({ message: "Plan not found" });
+        }
+        res.status(200).json({ message: "Plan deleted successfully", deletedPlan });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
