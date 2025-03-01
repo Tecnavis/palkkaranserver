@@ -518,10 +518,19 @@ exports. getOrdersByRoute = async (req, res) => {
 
         // Find orders where the customer is in the list of found customer IDs
         const orders = await OrderProduct.find({ customer: { $in: customerIds } })
-            .populate("customer", `name email phone routeno ${image ||"noimage"}`)
+            .populate("customer", "name email phone routeno image")
             .populate("productItems.product", "title productId category price");
 
-        res.status(200).json(orders);
+          // Ensure customer image is set to null if not available
+          const modifiedOrders = orders.map(order => ({
+            ...order._doc,
+            customer: {
+                ...order.customer._doc,
+                image: order.customer.image || null
+            }
+        }));
+
+        res.status(200).json(modifiedOrders);
     } catch (error) {
         console.error("Error fetching orders by route:", error);
         res.status(500).json({ message: "Internal Server Error" });
