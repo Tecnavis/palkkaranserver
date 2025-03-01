@@ -11,7 +11,17 @@ const calculateMonthlyDates = () => {
         dates.push(newDate);
     }
     return dates;
+};const calculateDailyDates = () => {
+    const today = new Date();
+    const dates = [];
+    for (let i = 0; i < 90; i++) {
+        const newDate = new Date(today);
+        newDate.setDate(today.getDate() + i);
+        dates.push(newDate);
+    }
+    return dates;
 };
+
 
 // Create a new plan for a customer
 exports.createPlan = async (req, res) => {
@@ -26,7 +36,7 @@ exports.createPlan = async (req, res) => {
         let dates = [];
         switch (planType) {
             case "daily":
-                dates.push(new Date()); // Current date for daily plan
+                dates = calculateDailyDates(); // Generate 90 days for daily plan
                 break;
 
             case "custom":
