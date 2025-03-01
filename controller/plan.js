@@ -183,51 +183,122 @@ exports.getPlansByCustomerId = async (req, res) => {
 
 
 // Apply leave for a specific plan
+// exports.applyLeave = async (req, res) => {
+//     const { customerId, dates } = req.body; // Expecting an array of dates
+
+//     try {
+//         const plan = await Plan.findOne({ customer: customerId, isActive: true });
+
+//         if (!plan) {
+//             return res.status(404).json({ message: "No active plan found for this customer" });
+//         }
+
+//         // Convert incoming dates to Date objects
+//         const leaveDates = dates.map(date => new Date(date));
+
+//         // Filter out dates that are already in the leaves array
+//         const newLeaveDates = leaveDates.filter(
+//             leaveDate => !plan.leaves.some(existingDate => existingDate.toISOString() === leaveDate.toISOString())
+//         );
+
+//         if (newLeaveDates.length === 0) {
+//             return res.status(400).json({ message: "Leave already applied for the selected dates" });
+//         }
+
+//         // Add new leave dates
+//         plan.leaves.push(...newLeaveDates);
+//         await plan.save();
+
+//         res.status(200).json({ message: "Leave applied successfully", plan });
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: "Internal server error" });
+//     }
+// };
 exports.applyLeave = async (req, res) => {
-    const { customerId, dates } = req.body; // Expecting an array of leave dates
+    const { customerId, dates } = req.body; // Expecting an array of dates
 
     try {
         // Find all active plans for the customer
-        const plans = await Plan.find({ customer: customerId, isActive: true });
+        const plans = await Plan.find({ 
+            customer: customerId, 
+            isActive: true 
+        });
 
-        if (!plans || plans.length === 0) {
+        if (plans.length === 0) {
             return res.status(404).json({ message: "No active plans found for this customer" });
         }
 
-        // Convert incoming dates to Date objects
-        const leaveDates = dates.map(date => new Date(date));
+        // Convert incoming dates to Date objects with time set to midnight for consistent comparison
+        const leaveDates = dates.map(date => {
+            const leaveDate = new Date(date);
+            return leaveDate;
+        });
 
-        let leaveApplied = false;
+        let updatedPlans = [];
+        
+        // Process each plan
+        for (const plan of plans) {
+            // For each leave date, check if it exists in the plan's dates array
+            const relevantLeaveDates = leaveDates.filter(leaveDate => {
+                // Check if the leave date exists in the plan's dates array
+                return plan.dates.some(planDate => {
+                    // Compare dates by converting to ISO string and checking date portion
+                    const planDateString = new Date(planDate).toISOString().split('T')[0];
+                    const leaveDateString = leaveDate.toISOString().split('T')[0];
+                    return planDateString === leaveDateString;
+                });
+            });
 
-        for (let plan of plans) {
-            // Check if any leave date exists in the plan's dates
-            const applicableLeaveDates = leaveDates.filter(leaveDate =>
-                plan.dates.some(planDate => planDate.toISOString() === leaveDate.toISOString())
-            );
-
-            if (applicableLeaveDates.length > 0) {
+            if (relevantLeaveDates.length > 0) {
                 // Filter out dates that are already in the leaves array
-                const newLeaveDates = applicableLeaveDates.filter(
-                    leaveDate => !plan.leaves.some(existingDate => existingDate.toISOString() === leaveDate.toISOString())
+                const newLeaveDates = relevantLeaveDates.filter(
+                    leaveDate => !plan.leaves.some(existingLeave => {
+                        // Compare dates by converting to ISO string and checking date portion
+                        const existingLeaveString = new Date(existingLeave).toISOString().split('T')[0];
+                        const leaveDateString = leaveDate.toISOString().split('T')[0];
+                        return existingLeaveString === leaveDateString;
+                    })
                 );
 
                 if (newLeaveDates.length > 0) {
-                    // Add new leave dates
+                    // Add new leave dates to this plan
                     plan.leaves.push(...newLeaveDates);
+                    
+                    // Update dynamicDates if it exists
+                    if (plan.dynamicDates && plan.dynamicDates.length > 0) {
+                        newLeaveDates.forEach(leaveDate => {
+                            const leaveDateString = leaveDate.toISOString().split('T')[0];
+                            
+                            plan.dynamicDates.forEach(dynamicDate => {
+                                const dynamicDateString = new Date(dynamicDate.date).toISOString().split('T')[0];
+                                
+                                if (dynamicDateString === leaveDateString) {
+                                    dynamicDate.isLeave = true;
+                                }
+                            });
+                        });
+                    }
+                    
                     await plan.save();
-                    leaveApplied = true;
+                    updatedPlans.push(plan);
                 }
             }
         }
 
-        if (!leaveApplied) {
-            return res.status(400).json({ message: "No valid leave dates found in any active plan" });
+        if (updatedPlans.length === 0) {
+            return res.status(400).json({ 
+                message: "No new leaves applied. Either the dates don't exist in any plan or leave is already applied for these dates."
+            });
         }
 
-        res.status(200).json({ message: "Leave applied successfully to relevant plans" });
+        res.status(200).json({ 
+            message: `Leave applied successfully across ${updatedPlans.length} plans`, 
+            updatedPlans 
+        });
+        
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
     }
 };
-
