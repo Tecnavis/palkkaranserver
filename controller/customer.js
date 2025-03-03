@@ -3,114 +3,12 @@ const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 const twilio = require('twilio');
+
 const CustomerCart = require('../models/customercart');
 const Plan = require('../models/plans');
-
-
-
-//login 
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
-// Login controller to send OTP
-exports.login = asyncHandler(async (req, res) => {
-    const { phone, password } = req.body;
-
-    // Check if the customer exists
-    const customer = await CustomerModel.findOne({ phone });
-    if (!customer) {
-        return res.status(400).json({ message: "Incorrect phone number or password" });
-    }
-
-    // Check if the customer is confirmed
-    if (!customer.isConfirmed) {
-        return res.status(400).json({ message: "Your account is not confirmed. Please confirm your account before logging in." });
-    }
-
-    // Compare the provided password with the hashed password in the database
-    const isPasswordMatch = await bcrypt.compare(password, customer.password);
-    if (!isPasswordMatch) {
-        return res.status(400).json({ message: "Incorrect phone number or password" });
-    }
-
-    // Generate a 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000);
-
-    // Store OTP temporarily in the database (optional)
-    customer.tokens = otp.toString(); 
-    await customer.save();
-
-    // Send OTP via Twilio SMS
-    await client.messages.create({
-        body: `Your OTP code is ${otp}. Do not share this with anyone.`,
-        from: process.env.TWLIO_TRIAL_NUMBER,
-        to: phone
-    });
-
-    res.status(200).json({
-        message: "OTP sent successfully. Please verify to continue.",
-        phone
-    });
-});
-
-
-exports.verifyOtp = asyncHandler(async (req, res) => {
-    const { phone, otp } = req.body;
-
-    // Check if the user exists
-    const customer = await CustomerModel.findOne({ phone });
-    if (!customer) {
-        return res.status(400).json({ message: "User not found" });
-    }
-
-    // Check if the OTP is correct
-    if (customer.tokens !== otp) {
-        return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    // Clear the OTP after successful verification
-    customer.tokens = "";
-    await customer.save();
-
-    // Generate access token upon successful OTP verification
-    const accessToken = jwt.sign(
-        {
-            user: {
-                username: customer.name || "Unknown",
-                userId: customer._id,
-                userPhone: customer.phone,
-                address: customer.address,
-                location: customer.location,
-                routeno: customer.routeno,
-                routename: customer.routename,
-            },
-        },
-        process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "15m" }
-    );
-
-    res.status(200).json({
-        message: "OTP verified successfully.",
-        accessToken,
-        user: {
-            username: customer.name,
-            _id: customer._id,
-            UserId: customer.customerId,
-            userPhone: customer.phone,
-            address: customer.address,
-            location: customer.location,
-            routeno: customer.routeno || "",
-            routename: customer.routename || "",
-            proofimage: customer.image || "",
-        },
-    });
-});
-
-
-
-
-
 // Function to generate the next customerId
 const generateCustomerId = async () => {
     // Get the last customer record
@@ -256,58 +154,58 @@ exports.deleteAll = asyncHandler(async (req, res) => {
 })
 
 //login customer  and store token and details in local storage
-// exports.login = asyncHandler(async (req, res) => {
-//     const { phone, password } = req.body;
+exports.login = asyncHandler(async (req, res) => {
+    const { phone, password } = req.body;
 
-//     // Check if the customer exists
-//     const customer = await CustomerModel.findOne({ phone });
-//     if (!customer) {
-//         return res.status(400).json({ message: "Incorrect phone number or password" });
-//     }
+    // Check if the customer exists
+    const customer = await CustomerModel.findOne({ phone });
+    if (!customer) {
+        return res.status(400).json({ message: "Incorrect phone number or password" });
+    }
 
-//     // Check if the customer is confirmed
-//     if (!customer.isConfirmed) {
-//         return res.status(400).json({ message: "Your account is not confirmed. Please confirm your account before logging in." });
-//     }
+    // Check if the customer is confirmed
+    if (!customer.isConfirmed) {
+        return res.status(400).json({ message: "Your account is not confirmed. Please confirm your account before logging in." });
+    }
 
-//     // Compare the provided password with the hashed password in the database
-//     const isPasswordMatch = await bcrypt.compare(password, customer.password);
-//     if (!isPasswordMatch) {
-//         return res.status(400).json({ message: "Incorrect phone number or password" });
-//     }
+    // Compare the provided password with the hashed password in the database
+    const isPasswordMatch = await bcrypt.compare(password, customer.password);
+    if (!isPasswordMatch) {
+        return res.status(400).json({ message: "Incorrect phone number or password" });
+    }
 
-//     // Generate access token if phone and password are correct
-//     const accessToken = jwt.sign({
-//             user: {
-//                 username: customer.name,
-//                 userId: customer._id,
-//                 userPhone: customer.phone,
-//                 address: customer.address,
-//                 location: customer.location,
-//                 routeno: customer.routeno,
-//                 routename: customer.routename,
-//             },
-//         },
-//         process.env.ACCESS_TOKEN_SECRET,
-//         { expiresIn: '15m' }
-//     );
+    // Generate access token if phone and password are correct
+    const accessToken = jwt.sign({
+            user: {
+                username: customer.name,
+                userId: customer._id,
+                userPhone: customer.phone,
+                address: customer.address,
+                location: customer.location,
+                routeno: customer.routeno,
+                routename: customer.routename,
+            },
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: '15m' }
+    );
 
-//     // Respond with the access token and user details
-//     res.status(200).json({
-//         accessToken,
-//         user: {
-//             username: customer.name,
-//             _id: customer._id,
-//             UserId: customer.customerId,
-//             userPhone: customer.phone,
-//             address: customer.address,
-//             location: customer.location,
-//             routeno: customer.routeno||"",
-//             routename: customer.routename||"",
-//             proofimage: customer.image||"",
-//         },
-//     });
-// });
+    // Respond with the access token and user details
+    res.status(200).json({
+        accessToken,
+        user: {
+            username: customer.name,
+            _id: customer._id,
+            UserId: customer.customerId,
+            userPhone: customer.phone,
+            address: customer.address,
+            location: customer.location,
+            routeno: customer.routeno||"",
+            routename: customer.routename||"",
+            proofimage: customer.image||"",
+        },
+    });
+});
 
 
 //updateCustomerDetails by id (name,phone,email)
