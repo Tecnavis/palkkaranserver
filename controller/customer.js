@@ -19,8 +19,16 @@ exports.login = asyncHandler(async (req, res) => {
 
     // Check if the customer exists
     const customer = await CustomerModel.findOne({ phone });
+
+    console.log("Retrieved Customer:", customer); // Debugging
+
     if (!customer) {
         return res.status(400).json({ message: "Incorrect phone number or password" });
+    }
+
+    // Ensure the name is present
+    if (!customer.name) {
+        return res.status(500).json({ message: "Username is required, but not found in the database." });
     }
 
     // Check if the customer is confirmed
@@ -37,8 +45,8 @@ exports.login = asyncHandler(async (req, res) => {
     // Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    // Store OTP temporarily in the database (optional)
-    customer.tokens = otp.toString(); 
+    // Store OTP temporarily in the database
+    customer.tokens = otp.toString();
     await customer.save();
 
     // Send OTP via Twilio SMS
@@ -53,6 +61,7 @@ exports.login = asyncHandler(async (req, res) => {
         phone
     });
 });
+
 
 
 exports.verifyOtp = asyncHandler(async (req, res) => {
