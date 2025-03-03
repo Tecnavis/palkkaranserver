@@ -16,6 +16,8 @@ var upload = multer({ storage: storage });
 
 //admin signup and login routes
 router.post('/',upload.single("image"),Controller.create)
+
+router.post("/verify-otp", Controller.verifyOtp);
 router.get('/',Controller.getAll)
 router.get('/:id',Controller.get)
 router.put('/:id',Controller.update)
