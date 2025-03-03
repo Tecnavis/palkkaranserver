@@ -6,7 +6,6 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const twilio = require('twilio');
-
 const CustomerCart = require('../models/customercart');
 const Plan = require('../models/plans');
 
@@ -46,17 +45,19 @@ exports.login = asyncHandler(async (req, res) => {
 
     // Send OTP via Twilio
     try {
-        await client.messages.create({
+        const message = await client.messages.create({
             body: `Your verification code is: ${otp}`,
             from: process.env.TWLIO_NUMBER,
             to: phone
         });
-
+    
+        console.log("OTP sent successfully:", message.sid);
         return res.status(200).json({ message: "OTP sent to your phone number. Please verify." });
     } catch (error) {
         console.error("Error sending OTP:", error);
-        return res.status(500).json({ message: "Error sending OTP. Please try again later." });
+        return res.status(500).json({ message: "Error sending OTP. Please try again later.", error: error.message });
     }
+    
 });
 
 // OTP Verification Endpoint
