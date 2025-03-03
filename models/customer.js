@@ -49,10 +49,10 @@ const customerSchema = new mongoose.Schema({
     isConfirmed: {
         type: Boolean,
         default: false
-    },
+    }
 
-    otp: { type: String, default: null }, // Store OTP
-    otpExpiry: { type: Number, default: null } // Store OTP expiry timestamps
+    // otp: { type: Number }, // OTP for password reset
+    // otpExpires: { type: Date } // OTP expiration time
 });
 
 // Pre-save hook to hash passwords

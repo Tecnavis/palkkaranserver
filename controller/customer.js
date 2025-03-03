@@ -6,99 +6,9 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const twilio = require('twilio');
+
 const CustomerCart = require('../models/customercart');
 const Plan = require('../models/plans');
-
-
-const OTP_EXPIRY = 60; // 1 minute in seconds
-const twilioClient = require("twilio")(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_NUMBER;
-
-// Login function (Sends OTP)
-exports.login = asyncHandler(async (req, res) => {
-    const { phone } = req.body;
-
-    // Check if the phone number exists
-    const customer = await CustomerModel.findOne({ phone });
-    if (!customer) {
-        return res.status(400).json({ message: "Phone number is not registered" });
-    }
-
-    // Generate a 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = Date.now() + OTP_EXPIRY * 1000; // Set expiry time
-
-    // Save OTP and expiry time in database
-    customer.otp = otp;
-    customer.otpExpiry = otpExpiry;
-    await customer.save();
-
-    // Send OTP via Twilio SMS
-    await twilioClient.messages.create({
-        body: `Your OTP is ${otp}. It expires in 1 minute.`,
-        from: TWILIO_PHONE_NUMBER,
-        to: phone
-    });
-
-    res.status(200).json({ message: "OTP sent to your phone number. Please verify to continue." });
-});
-
-
-
-// OTP Verification Endpoint
-// OTP Verification
-exports.verifyOtp = asyncHandler(async (req, res) => {
-    const { phone, otp } = req.body;
-
-    // Find user
-    const customer = await CustomerModel.findOne({ phone });
-    if (!customer) {
-        return res.status(400).json({ message: "Invalid phone number" });
-    }
-
-    // Check if OTP is valid
-    if (!customer.otp || customer.otp !== otp || Date.now() > customer.otpExpiry) {
-        return res.status(400).json({ message: "Invalid or expired OTP" });
-    }
-
-    // OTP verified, generate access token
-    const accessToken = jwt.sign({
-        user: {
-            username: customer.name,
-            userId: customer._id,
-            userPhone: customer.phone,
-            address: customer.address,
-            location: customer.location,
-            routeno: customer.routeno,
-            routename: customer.routename,
-        },
-    }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
-
-    // Clear OTP from database after successful verification
-    customer.otp = null;
-    customer.otpExpiry = null;
-    await customer.save();
-
-    res.status(200).json({
-        accessToken,
-        user: {
-            username: customer.name,
-            _id: customer._id,
-            UserId: customer.customerId,
-            userPhone: customer.phone,
-            address: customer.address,
-            location: customer.location,
-            routeno: customer.routeno || "",
-            routename: customer.routename || "",
-            proofimage: customer.image || "",
-        },
-    });
-});
-
-
-
-
-
 // Function to generate the next customerId
 const generateCustomerId = async () => {
     // Get the last customer record
@@ -244,58 +154,58 @@ exports.deleteAll = asyncHandler(async (req, res) => {
 })
 
 //login customer  and store token and details in local storage
-// exports.login = asyncHandler(async (req, res) => {
-//     const { phone, password } = req.body;
+exports.login = asyncHandler(async (req, res) => {
+    const { phone, password } = req.body;
 
-//     // Check if the customer exists
-//     const customer = await CustomerModel.findOne({ phone });
-//     if (!customer) {
-//         return res.status(400).json({ message: "Incorrect phone number or password" });
-//     }
+    // Check if the customer exists
+    const customer = await CustomerModel.findOne({ phone });
+    if (!customer) {
+        return res.status(400).json({ message: "Incorrect phone number or password" });
+    }
 
-//     // Check if the customer is confirmed
-//     if (!customer.isConfirmed) {
-//         return res.status(400).json({ message: "Your account is not confirmed. Please confirm your account before logging in." });
-//     }
+    // Check if the customer is confirmed
+    if (!customer.isConfirmed) {
+        return res.status(400).json({ message: "Your account is not confirmed. Please confirm your account before logging in." });
+    }
 
-//     // Compare the provided password with the hashed password in the database
-//     const isPasswordMatch = await bcrypt.compare(password, customer.password);
-//     if (!isPasswordMatch) {
-//         return res.status(400).json({ message: "Incorrect phone number or password" });
-//     }
+    // Compare the provided password with the hashed password in the database
+    const isPasswordMatch = await bcrypt.compare(password, customer.password);
+    if (!isPasswordMatch) {
+        return res.status(400).json({ message: "Incorrect phone number or password" });
+    }
 
-//     // Generate access token if phone and password are correct
-//     const accessToken = jwt.sign({
-//             user: {
-//                 username: customer.name,
-//                 userId: customer._id,
-//                 userPhone: customer.phone,
-//                 address: customer.address,
-//                 location: customer.location,
-//                 routeno: customer.routeno,
-//                 routename: customer.routename,
-//             },
-//         },
-//         process.env.ACCESS_TOKEN_SECRET,
-//         { expiresIn: '15m' }
-//     );
+    // Generate access token if phone and password are correct
+    const accessToken = jwt.sign({
+            user: {
+                username: customer.name,
+                userId: customer._id,
+                userPhone: customer.phone,
+                address: customer.address,
+                location: customer.location,
+                routeno: customer.routeno,
+                routename: customer.routename,
+            },
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: '15m' }
+    );
 
-//     // Respond with the access token and user details
-//     res.status(200).json({
-//         accessToken,
-//         user: {
-//             username: customer.name,
-//             _id: customer._id,
-//             UserId: customer.customerId,
-//             userPhone: customer.phone,
-//             address: customer.address,
-//             location: customer.location,
-//             routeno: customer.routeno||"",
-//             routename: customer.routename||"",
-//             proofimage: customer.image||"",
-//         },
-//     });
-// });
+    // Respond with the access token and user details
+    res.status(200).json({
+        accessToken,
+        user: {
+            username: customer.name,
+            _id: customer._id,
+            UserId: customer.customerId,
+            userPhone: customer.phone,
+            address: customer.address,
+            location: customer.location,
+            routeno: customer.routeno||"",
+            routename: customer.routename||"",
+            proofimage: customer.image||"",
+        },
+    });
+});
 
 
 //updateCustomerDetails by id (name,phone,email)
