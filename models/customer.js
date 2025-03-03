@@ -50,9 +50,6 @@ const customerSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     }
-
-    // otp: { type: Number }, // OTP for password reset
-    // otpExpires: { type: Date } // OTP expiration time
 });
 
 // Pre-save hook to hash passwords
