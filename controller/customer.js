@@ -77,13 +77,13 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
     const accessToken = jwt.sign(
         {
             user: {
-                username: customer.name || "",
-                userId: customer._id || "",
-                userPhone: customer.phone || "",
-                address: customer.address || "",
-                location: customer.location || "",
-                routeno: customer.routeno || "",
-                routename: customer.routename || "",
+                username: customer.name || "Unknown",
+                userId: customer._id,
+                userPhone: customer.phone,
+                address: customer.address,
+                location: customer.location,
+                routeno: customer.routeno,
+                routename: customer.routename,
             },
         },
         process.env.ACCESS_TOKEN_SECRET,
@@ -94,7 +94,7 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
         message: "OTP verified successfully.",
         accessToken,
         user: {
-            username: customer.name || "",
+            username: customer.name,
             _id: customer._id,
             UserId: customer.customerId,
             userPhone: customer.phone,

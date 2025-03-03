@@ -18,12 +18,12 @@ var upload = multer({ storage: storage });
 router.post('/',upload.single("image"),Controller.create)
 
 router.post("/verify-otp", Controller.verifyOtp);
+router.post('/login',Controller.login)
 router.get('/',Controller.getAll)
 router.get('/:id',Controller.get)
 router.put('/:id',Controller.update)
 router.delete('/:id',Controller.delete)
 router.delete('/',Controller.deleteAll)
-router.post('/login',Controller.login)
 router.post("/:id/addresses", Controller.addCustomerAddress);
 router.get("/:id/addresses", Controller.getCustomerAddresses);
 router.delete("/:id/addresses/:addressIndex", Controller.deleteCustomerAddress);
