@@ -15,7 +15,7 @@ const twilioClient = require("twilio")(process.env.TWILIO_ACCOUNT_SID, process.e
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_NUMBER;
 
 // Login function (Sends OTP)
-exports.sendOtp = asyncHandler(async (req, res) => {
+exports.login = asyncHandler(async (req, res) => {
     const { phone } = req.body;
 
     // Check if the phone number exists
