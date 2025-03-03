@@ -15,24 +15,13 @@ const twilioClient = require("twilio")(process.env.TWILIO_ACCOUNT_SID, process.e
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_NUMBER;
 
 // Login function (Sends OTP)
-exports.login = asyncHandler(async (req, res) => {
-    const { phone, password } = req.body;
+exports.sendOtp = asyncHandler(async (req, res) => {
+    const { phone } = req.body;
 
-    // Check if customer exists
+    // Check if the phone number exists
     const customer = await CustomerModel.findOne({ phone });
     if (!customer) {
-        return res.status(400).json({ message: "Incorrect phone number or password" });
-    }
-
-    // Check if the customer is confirmed
-    if (!customer.isConfirmed) {
-        return res.status(400).json({ message: "Your account is not confirmed. Please confirm your account before logging in." });
-    }
-
-    // Verify password
-    const isPasswordMatch = await bcrypt.compare(password, customer.password);
-    if (!isPasswordMatch) {
-        return res.status(400).json({ message: "Incorrect phone number or password" });
+        return res.status(400).json({ message: "Phone number is not registered" });
     }
 
     // Generate a 6-digit OTP
@@ -55,6 +44,7 @@ exports.login = asyncHandler(async (req, res) => {
 });
 
 
+
 // OTP Verification Endpoint
 // OTP Verification
 exports.verifyOtp = asyncHandler(async (req, res) => {
@@ -67,7 +57,7 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
     }
 
     // Check if OTP is valid
-    if (customer.otp !== otp || Date.now() > customer.otpExpiry) {
+    if (!customer.otp || customer.otp !== otp || Date.now() > customer.otpExpiry) {
         return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
@@ -104,6 +94,7 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
         },
     });
 });
+
 
 
 
