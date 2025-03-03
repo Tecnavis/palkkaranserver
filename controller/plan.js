@@ -46,18 +46,26 @@ exports.createPlan = async (req, res) => {
                 dates = customDates.map(date => new Date(date));
                 break;
 
-            case "weekly":
-                if (!weeklyDays || !Array.isArray(weeklyDays)) {
-                    return res.status(400).json({ message: "Invalid weekly days" });
-                }
-                const currentDay = new Date().getDay(); // 0 (Sunday) to 6 (Saturday)
-                weeklyDays.forEach(day => {
-                    const offset = (day - currentDay + 7) % 7; // Offset to the next day
-                    const nextDay = new Date();
-                    nextDay.setDate(new Date().getDate() + offset);
-                    dates.push(nextDay);
-                });
-                break;
+                case "weekly":
+                    if (!weeklyDays || !Array.isArray(weeklyDays)) {
+                        return res.status(400).json({ message: "Invalid weekly days" });
+                    }
+                
+                    const weeksToGenerate = 12; // Number of weeks to generate future dates (about 3 months)
+                    const today = new Date();
+                
+                    weeklyDays.forEach(day => {
+                        let currentDate = new Date();
+                        let offset = (day - currentDate.getDay() + 7) % 7; // Calculate offset to the next selected day
+                        currentDate.setDate(currentDate.getDate() + offset); // Set to the next occurrence of the selected day
+                
+                        for (let i = 0; i < weeksToGenerate; i++) {
+                            dates.push(new Date(currentDate)); // Add the calculated date to the list
+                            currentDate.setDate(currentDate.getDate() + 7); // Move to the next week's same day
+                        }
+                    });
+                    break;
+                
 
                 case "alternative":
                     const { startDate, interval } = req.body; // Expect startDate and interval (e.g., every 2 days)
