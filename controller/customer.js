@@ -16,7 +16,7 @@ const Plan = require('../models/plans');
 
 
 // Twilio Configuration
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 
 // Temporary storage for OTPs (Use Redis for better scalability)
 const otpStorage = new Map();
