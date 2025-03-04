@@ -19,6 +19,6 @@ router.put("/changeplan", orderController.changePlan)
 router.post("/send-invoice",orderController.sendInvoiceEmail);
 router.get("/orders/:routeNo", orderController.getOrdersByRoute);
 //tomorrow orders
-router.get("/tomorrow-orders", orderController.getTomorrowOrders);
+router.get("/tomorrow-orders/routes", orderController.getTomorrowOrders);
 
 module.exports = router;
