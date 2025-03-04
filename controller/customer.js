@@ -486,3 +486,48 @@ exports.updateCustomerImage = async (req, res) => {
     }
 };
 
+// Add a paid amount (temporary until confirmation)
+exports.addPaidAmount = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { amount } = req.body;
+
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ message: "Invalid amount" });
+        }
+
+        const customer = await Customer.findById(id);
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        // Store the amount and date but keep it unconfirmed
+        customer.paidAmounts.push({ amount, date: new Date() });
+
+        await customer.save();
+
+        res.status(200).json({ message: "Payment added temporarily. Confirm to finalize.", customer });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+// Confirm a payment (finalizing it)
+exports.confirmPayment = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const customer = await Customer.findById(id);
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        // Mark customer payment as confirmed
+        customer.isConfirmed = true;
+        await customer.save();
+
+        res.status(200).json({ message: "Payment confirmed successfully", customer });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};

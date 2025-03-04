@@ -49,7 +49,17 @@ const customerSchema = new mongoose.Schema({
     isConfirmed: {
         type: Boolean,
         default: false
-    }
+    },
+
+    //paid amounts with date
+    paidAmounts: [
+        {
+            date: { type: Date, default: Date.now },
+            amount: { type: Number, default: 0 },
+            isGet: { type: Boolean, default: false },
+        },
+    ],
+    
 });
 
 // Pre-save hook to hash passwords

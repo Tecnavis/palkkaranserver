@@ -32,5 +32,11 @@ router.put("/change-password/:id", Controller.changePassword);
 router.put("/customerdetails/:id", Controller.updateCustomerDetails);
 router.get('/confirm/:customerId', Controller.confirmCustomer);
 router.put("/update-image/:customerId", upload.single("image"), Controller.updateCustomerImage);
+
+// Route to add a paid amount (temporary, awaiting confirmation)
+router.post("/:id/add-paid-amount", Controller.addPaidAmount);
+
+// Route to confirm payment
+router.post("/:id/confirm-payment", Controller.confirmPayment);
 //get all customers by routeno
 module.exports = router;
