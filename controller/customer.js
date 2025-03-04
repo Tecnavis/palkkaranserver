@@ -612,7 +612,7 @@ exports.getPaidAmounts = async (req, res) => {
 
 
 //get all customers by routeno
-exports.getCustomersByRoute = async (req, res) => {
+exports.getCustomersByRouteNo = async (req, res) => {
     try {
         const { routeNo } = req.params;
         const customers = await CustomerModel.find({ routeNo: routeno });
