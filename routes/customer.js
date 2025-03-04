@@ -41,6 +41,8 @@ router.patch('/confirm-paid-amount/confirm', Controller.confirmPaidAmount);
 
 // Route to get all paid amounts for a customer
 router.get('/paid-amounts/:customerId', Controller.getPaidAmounts);
+//get unconfirmed paid amounts
+router.get('/unconfirmed-paid-amounts/:customerId', Controller.getUnconfirmedPaidAmounts);
 
 //get all customers by routeno
 router.get("/routeno-based-customer/:routeno", Controller.getCustomersByRouteNo);

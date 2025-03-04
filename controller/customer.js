@@ -633,3 +633,33 @@ exports.getCustomersByRouteNo = async (req, res) => {
     }
 };
 
+
+//get all unconfirmed paid amounts for a customer
+exports.getUnconfirmedPaidAmounts = async (req, res) => {
+    try {
+        const { customerId } = req.params;
+
+        // Find the customer
+        const customer = await CustomerModel.findOne({ customerId });
+
+        if (!customer) {
+            return res.status(404).json({ 
+                message: 'Customer not found' 
+            });
+        }
+
+        // Filter unconfirmed paid amounts
+        const unconfirmedPaidAmounts = customer.paidAmounts.filter(payment => !payment.isGet);
+
+        res.status(200).json({
+            unconfirmedPaidAmounts
+        });
+    } catch (error) {
+        console.error('Error retrieving unconfirmed paid amounts:', error);
+        res.status(500).json({ 
+            message: 'Internal server error', 
+            error: error.message 
+        });
+    }
+
+}
