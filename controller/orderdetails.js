@@ -646,21 +646,43 @@ exports.getCustomerInvoices = async (req, res) => {
     try {
         const { customerId } = req.params;
 
-        // Fetch orders for the given customer ID
-        const invoices = await OrderProduct.find({ customer: customerId })
+        // Fetch orders for the given customer
+        const orders = await OrderProduct.find({ customer: customerId })
             .populate("customer", "name email phone")
-            .populate("productItems.product", "name category price")
-            .populate("plan", "planType")
-            .sort({ createdAt: -1 });
+            .populate("productItems.product", "category")
+            .lean();
 
-        if (!invoices.length) {
-            return res.status(404).json({ message: "No invoices found for this customer." });
+        if (!orders.length) {
+            return res.status(404).json({ message: "No invoices found for this customer" });
         }
 
-        res.status(200).json(invoices);
+        const formattedResponse = orders.map(order => ({
+            customer: order.customer,
+            invoiceDetails: {
+                invoiceNo: order._id,
+                paymentType: order.paymentMethod,
+                paymentStatus: order.paymentStatus,
+            },
+            orderItems: order.selectedPlanDetails?.dates
+                .filter(dateItem => dateItem.status === "delivered")
+                .map((dateItem, index) => ({
+                    no: index + 1,
+                    date: dateItem.date,
+                    status: dateItem.status,
+                    products: order.productItems.map(item => ({
+                        product: item.product?.category || "N/A",
+                        quantity: item.quantity,
+                        routePrice: item.routePrice,
+                        subtotal: item.quantity * item.routePrice,
+                    })),
+                })),
+            total: order.productItems.reduce((acc, item) => acc + item.quantity * item.routePrice, 0),
+        }));
+
+        res.json(formattedResponse);
     } catch (error) {
-        console.error("Error fetching invoices:", error);
-        res.status(500).json({ message: "Server error while fetching invoices." });
+        console.error("Error fetching invoice details:", error);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 };
 
