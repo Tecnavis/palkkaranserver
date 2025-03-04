@@ -487,47 +487,66 @@ exports.updateCustomerImage = async (req, res) => {
 };
 
 // Add a paid amount (temporary until confirmation)
+
+// Add a paid amount to the customer
 exports.addPaidAmount = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { customerId } = req.params;
         const { amount } = req.body;
 
         if (!amount || amount <= 0) {
-            return res.status(400).json({ message: "Invalid amount" });
+            return res.status(400).json({ message: "Amount must be greater than zero." });
         }
 
-        const customer = await Customer.findById(id);
+        const customer = await Customer.findOne({ customerId });
+
         if (!customer) {
-            return res.status(404).json({ message: "Customer not found" });
+            return res.status(404).json({ message: "Customer not found." });
         }
 
-        // Store the amount and date but keep it unconfirmed
-        customer.paidAmounts.push({ amount, date: new Date() });
+        const newPayment = {
+            amount,
+            date: new Date(),
+            isGet: false, // Payment not confirmed yet
+        };
 
+        customer.paidAmounts.push(newPayment);
         await customer.save();
 
-        res.status(200).json({ message: "Payment added temporarily. Confirm to finalize.", customer });
+        res.status(200).json({ message: "Payment added successfully.", payment: newPayment });
+
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Internal server error.", error: error.message });
     }
 };
 
-// Confirm a payment (finalizing it)
+// Confirm the payment
 exports.confirmPayment = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { customerId, paymentId } = req.params;
 
-        const customer = await Customer.findById(id);
+        const customer = await Customer.findOne({ customerId });
+
         if (!customer) {
-            return res.status(404).json({ message: "Customer not found" });
+            return res.status(404).json({ message: "Customer not found." });
         }
 
-        // Mark customer payment as confirmed
-        customer.isConfirmed = true;
+        const payment = customer.paidAmounts.id(paymentId);
+
+        if (!payment) {
+            return res.status(404).json({ message: "Payment record not found." });
+        }
+
+        if (payment.isGet) {
+            return res.status(400).json({ message: "Payment already confirmed." });
+        }
+
+        payment.isGet = true;
         await customer.save();
 
-        res.status(200).json({ message: "Payment confirmed successfully", customer });
+        res.status(200).json({ message: "Payment confirmed successfully.", payment });
+
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Internal server error.", error: error.message });
     }
 };
