@@ -697,7 +697,6 @@ exports.getCustomerInvoices = async (req, res) => {
     }
 };
 
-
 // Example Endpoints
 // Daily Plan: { "orderId": "ORDER_ID", "newPlanType": "daily" }
 // Custom Plan: { "orderId": "ORDER_ID", "newPlanType": "custom", "customDates": ["2025-02-08", "2025-02-09"] }
