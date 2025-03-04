@@ -43,7 +43,7 @@ router.patch('/confirm-paid-amount/confirm', Controller.confirmPaidAmount);
 router.get('/paid-amounts/:customerId', Controller.getPaidAmounts);
 
 //get all customers by routeno
-router.get("/routeno/:routeNo", Controller.getCustomersByRouteNo);
+router.get("/routeno-based-customer/:routeNo", Controller.getCustomersByRouteNo);
 
 //get all customers by routeno
 module.exports = router;
