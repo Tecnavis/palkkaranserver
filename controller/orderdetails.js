@@ -538,6 +538,61 @@ exports. getOrdersByRoute = async (req, res) => {
 };
 
 
+//
+
+exports. getTomorrowOrders = async (req, res) => {
+    try {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowDateStr = tomorrow.toISOString().split("T")[0]; // Format YYYY-MM-DD
+
+        // Fetch orders where selectedPlanDetails includes tomorrow's date
+        const orders = await OrderProduct.find({
+            "selectedPlanDetails.dates.date": {
+                $gte: new Date(tomorrowDateStr),
+                $lt: new Date(`${tomorrowDateStr}T23:59:59.999Z`)
+            }
+        }).populate("customer").populate("productItems.product");
+
+        // Group orders by route number
+        const routeData = {};
+
+        orders.forEach(order => {
+            const routeNo = order.customer?.routeno || "Unassigned";
+
+            if (!routeData[routeNo]) {
+                routeData[routeNo] = {
+                    quantities: {},
+                    totalLiters: 0
+                };
+            }
+
+            order.productItems.forEach(item => {
+                const productSize = item.product?.quantity; // e.g., "100ML"
+                const quantity = item.quantity;
+
+                if (productSize) {
+                    // Count quantities per route
+                    routeData[routeNo].quantities[productSize] =
+                        (routeData[routeNo].quantities[productSize] || 0) + quantity;
+
+                    // Convert to Liters
+                    const sizeInML = parseInt(productSize.match(/\d+/)[0], 10);
+                    const totalML = sizeInML * quantity;
+                    routeData[routeNo].totalLiters += totalML / 1000; // Convert ML to Liters
+                }
+            });
+        });
+
+        res.json({ success: true, data: routeData });
+    } catch (error) {
+        console.error("Error fetching tomorrow's orders:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+
+
 // Example Endpoints
 // Daily Plan: { "orderId": "ORDER_ID", "newPlanType": "daily" }
 // Custom Plan: { "orderId": "ORDER_ID", "newPlanType": "custom", "customDates": ["2025-02-08", "2025-02-09"] }

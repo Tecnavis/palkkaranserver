@@ -18,5 +18,7 @@ router.put("/stop-plan/:orderId", orderController.stopPlan);
 router.put("/changeplan", orderController.changePlan)
 router.post("/send-invoice",orderController.sendInvoiceEmail);
 router.get("/orders/:routeNo", orderController.getOrdersByRoute);
+//tomorrow orders
+router.get("/tomorrow-orders", orderController.getTomorrowOrders);
 
 module.exports = router;
