@@ -502,7 +502,7 @@ exports.addPaidAmount = async (req, res) => {
         }
 
         // Find the customer
-        const customer = await Customer.findOne({ customerId });
+        const customer = await CustomerModel.findOne({ customerId });
 
         if (!customer) {
             return res.status(404).json({ 
@@ -546,7 +546,7 @@ exports.confirmPaidAmount = async (req, res) => {
         }
 
         // Find the customer
-        const customer = await Customer.findOne({ customerId });
+        const customer = await CustomerModel.findOne({ customerId });
 
         if (!customer) {
             return res.status(404).json({ 
@@ -590,7 +590,7 @@ exports.getPaidAmounts = async (req, res) => {
         const { customerId } = req.params;
 
         // Find the customer
-        const customer = await Customer.findOne({ customerId });
+        const customer = await CustomerModel.findOne({ customerId });
 
         if (!customer) {
             return res.status(404).json({ 
