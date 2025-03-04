@@ -640,7 +640,38 @@ exports. getTodayOrders = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
+//
+// Get filtered invoices
+exports.getFilteredInvoices = async (req, res) => {
+    try {
+        const { customerId, startDate, endDate, paymentStatus } = req.query;
+        let filter = {};
 
+        if (customerId) {
+            filter.customer = customerId;
+        }
+
+        if (startDate && endDate) {
+            filter.createdAt = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate),
+            };
+        }
+
+        if (paymentStatus) {
+            filter.paymentStatus = paymentStatus;
+        }
+
+        const invoices = await OrderProduct.find(filter)
+            .populate("customer")
+            .populate("productItems.product");
+
+        res.status(200).json(invoices);
+    } catch (error) {
+        console.error("Error fetching invoices:", error);
+        res.status(500).json({ message: "Failed to fetch invoices" });
+    }
+};
 // Example Endpoints
 // Daily Plan: { "orderId": "ORDER_ID", "newPlanType": "daily" }
 // Custom Plan: { "orderId": "ORDER_ID", "newPlanType": "custom", "customDates": ["2025-02-08", "2025-02-09"] }

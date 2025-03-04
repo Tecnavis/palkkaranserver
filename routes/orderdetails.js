@@ -22,4 +22,6 @@ router.get("/orders/:routeNo", orderController.getOrdersByRoute);
 router.get("/tomorrow-orders/routes", orderController.getTomorrowOrders);
 //today orders
 router.get("/today-orders/routes", orderController.getTodayOrders);
+
+router.get("/invoices", orderController.getFilteredInvoices);
 module.exports = router;
