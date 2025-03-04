@@ -33,5 +33,4 @@ router.put("/customerdetails/:id", Controller.updateCustomerDetails);
 router.get('/confirm/:customerId', Controller.confirmCustomer);
 router.put("/update-image/:customerId", upload.single("image"), Controller.updateCustomerImage);
 //get all customers by routeno
-router.get("/routeno/:routeno", Controller.getAllCustomersByRouteNo);
 module.exports = router;

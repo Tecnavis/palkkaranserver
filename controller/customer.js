@@ -486,15 +486,3 @@ exports.updateCustomerImage = async (req, res) => {
     }
 };
 
-
-//get all customers by routeno
-exports.getAllCustomersByRouteNo = async (req, res) => {
-    try {
-        const { routeNo } = routeno;
-        const customers = await CustomerModel.find({ routeNo });
-        res.status(200).json(customers);
-    } catch (error) {
-        console.error("Error retrieving customers by route no:", error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-};
