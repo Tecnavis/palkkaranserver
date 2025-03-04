@@ -642,36 +642,28 @@ exports. getTodayOrders = async (req, res) => {
 };
 //
 // Get filtered invoices
-exports.getFilteredInvoices = async (req, res) => {
+exports.getCustomerInvoices = async (req, res) => {
     try {
-        const { customerId, startDate, endDate, paymentStatus } = req.query;
-        let filter = {};
+        const { customerId } = req.params;
 
-        if (customerId) {
-            filter.customer = customerId;
+        // Fetch orders for the given customer ID
+        const invoices = await OrderProduct.find({ customer: customerId })
+            .populate("customer", "name email phone")
+            .populate("productItems.product", "name category price")
+            .populate("plan", "planType")
+            .sort({ createdAt: -1 });
+
+        if (!invoices.length) {
+            return res.status(404).json({ message: "No invoices found for this customer." });
         }
-
-        if (startDate && endDate) {
-            filter.createdAt = {
-                $gte: new Date(startDate),
-                $lte: new Date(endDate),
-            };
-        }
-
-        if (paymentStatus) {
-            filter.paymentStatus = paymentStatus;
-        }
-
-        const invoices = await OrderProduct.find(filter)
-            .populate("customer")
-            .populate("productItems.product");
 
         res.status(200).json(invoices);
     } catch (error) {
         console.error("Error fetching invoices:", error);
-        res.status(500).json({ message: "Failed to fetch invoices" });
+        res.status(500).json({ message: "Server error while fetching invoices." });
     }
 };
+
 // Example Endpoints
 // Daily Plan: { "orderId": "ORDER_ID", "newPlanType": "daily" }
 // Custom Plan: { "orderId": "ORDER_ID", "newPlanType": "custom", "customDates": ["2025-02-08", "2025-02-09"] }
