@@ -2,7 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Product = require("../models/product");
 const mongoose = require('mongoose');
 const Category = require("../models/category"); // Assuming you have a Category model
-
+const Route = require("../models/route");
 // Function to generate new product ID
 const generateProductId = async () => {
     const updatedProduct = await Product.findOneAndUpdate(
@@ -123,20 +123,27 @@ exports.update = asyncHandler(async (req, res) => {
   });
   
 
-exports.deleteProduct = asyncHandler(async (req, res) => {
+  exports.deleteProduct = asyncHandler(async (req, res) => {
     try {
-      const product = await Product.findByIdAndDelete(req.params.id);
-  
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-  
-      res.status(200).json({ message: "Product deleted successfully" });
+        const product = await Product.findByIdAndDelete(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        // Remove the deleted product from all routes
+        await Route.updateMany(
+            { "products.productId": req.params.id },
+            { $pull: { products: { productId: req.params.id } } }
+        );
+
+        res.status(200).json({ message: "Product deleted successfully and removed from all routes" });
     } catch (error) {
-      console.error("Error deleting product:", error.message);
-      res.status(500).json({ message: "Failed to delete product", error: error.message });
+        console.error("Error deleting product:", error.message);
+        res.status(500).json({ message: "Failed to delete product", error: error.message });
     }
-  });
+});
+
   //
   exports.getProductsByCategory = async (req, res) => {
     const { categoryName } = req.params;
