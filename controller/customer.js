@@ -6,13 +6,8 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const twilio = require('twilio');
-
 const CustomerCart = require('../models/customercart');
 const Plan = require('../models/plans');
-
-
-
-
 
 
 // Twilio Configuration
@@ -259,61 +254,6 @@ exports.deleteAll = asyncHandler(async (req, res) => {
     res.status(200).json(customer);
 })
 
-//login customer  and store token and details in local storage
-// exports.login = asyncHandler(async (req, res) => {
-//     const { phone, password } = req.body;
-
-//     // Check if the customer exists
-//     const customer = await CustomerModel.findOne({ phone });
-//     if (!customer) {
-//         return res.status(400).json({ message: "Incorrect phone number or password" });
-//     }
-
-//     // Check if the customer is confirmed
-//     if (!customer.isConfirmed) {
-//         return res.status(400).json({ message: "Your account is not confirmed. Please confirm your account before logging in." });
-//     }
-
-//     // Compare the provided password with the hashed password in the database
-//     const isPasswordMatch = await bcrypt.compare(password, customer.password);
-//     if (!isPasswordMatch) {
-//         return res.status(400).json({ message: "Incorrect phone number or password" });
-//     }
-
-//     // Generate access token if phone and password are correct
-//     const accessToken = jwt.sign({
-//             user: {
-//                 username: customer.name,
-//                 userId: customer._id,
-//                 userPhone: customer.phone,
-//                 address: customer.address,
-//                 location: customer.location,
-//                 routeno: customer.routeno,
-//                 routename: customer.routename,
-//             },
-//         },
-//         process.env.ACCESS_TOKEN_SECRET,
-//         { expiresIn: '15m' }
-//     );
-
-//     // Respond with the access token and user details
-//     res.status(200).json({
-//         accessToken,
-//         user: {
-//             username: customer.name,
-//             _id: customer._id,
-//             UserId: customer.customerId,
-//             userPhone: customer.phone,
-//             address: customer.address,
-//             location: customer.location,
-//             routeno: customer.routeno||"",
-//             routename: customer.routename||"",
-//             proofimage: customer.image||"",
-//         },
-//     });
-// });
-
-
 //updateCustomerDetails by id (name,phone,email)
 exports.updateCustomerDetails = async (req, res) => {
     const { phone, email, name } = req.body;
@@ -542,6 +482,19 @@ exports.updateCustomerImage = async (req, res) => {
         res.status(200).json({ message: "Customer image updated successfully", image: imagePath });
     } catch (error) {
         console.error("Error updating customer image:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+//get all customers by routeno
+exports.getAllCustomersByRouteNo = async (req, res) => {
+    try {
+        const { routeNo } = routeno;
+        const customers = await CustomerModel.find({ routeNo });
+        res.status(200).json(customers);
+    } catch (error) {
+        console.error("Error retrieving customers by route no:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };

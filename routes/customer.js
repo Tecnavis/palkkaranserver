@@ -32,37 +32,6 @@ router.put("/change-password/:id", Controller.changePassword);
 router.put("/customerdetails/:id", Controller.updateCustomerDetails);
 router.get('/confirm/:customerId', Controller.confirmCustomer);
 router.put("/update-image/:customerId", upload.single("image"), Controller.updateCustomerImage);
-// router.post('/forget-password', Controller.sendOTP);
-
-// // Route to verify OTP and reset password
-// router.post('/reset-password', Controller.verifyOTP);
-
+//get all customers by routeno
+router.get("/routeno/:routeno", Controller.getAllCustomersByRouteNo);
 module.exports = router;
-// Endpoint: POST http://localhost:3001/forget-password
-
-// Body:
-// {
-//   "phone": "1234567890"
-// }
-
-
-// success Message{
-//   "message": "OTP sent successfully"
-// }
-
-
-
-
-
-
-// Endpoint: POST http://localhost:3001/reset-password
-
-// Body:
-// {
-//   "phone": "1234567890",
-//   "otp": "123456",
-//   "newPassword": "newpassword123"
-// }
-// {
-//   "message": "Password reset successful"
-// }
