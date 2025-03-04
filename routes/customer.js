@@ -34,7 +34,7 @@ router.get('/confirm/:customerId', Controller.confirmCustomer);
 router.put("/update-image/:customerId", upload.single("image"), Controller.updateCustomerImage);
 
 // Route to add a paid amount (temporary, awaiting confirmation)
-router.post("/:id/add-paid-amount", Controller.addPaidAmount);
+router.post("/add-paid-amount/:id/customer", Controller.addPaidAmount);
 
 // Route to confirm payment
 router.post("/:id/confirm-payment", Controller.confirmPayment);
