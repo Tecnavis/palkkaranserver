@@ -648,7 +648,7 @@ exports.getCustomerInvoices = async (req, res) => {
 
         // Fetch orders for the given customer
         const orders = await OrderProduct.find({ customer: customerId })
-            .populate("customer", "name email phone")
+            .populate("customer", "name email phone customerId paidAmounts")
             .populate("productItems.product", "category")
             .lean();
 
