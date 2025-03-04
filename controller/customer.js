@@ -614,11 +614,22 @@ exports.getPaidAmounts = async (req, res) => {
 //get all customers by routeno
 exports.getCustomersByRouteNo = async (req, res) => {
     try {
-        const { routeNo } = req.params;
-        const customers = await CustomerModel.find({ routeNo: routeno });
-        res.status(200).json(customers);
+        const { routeno } = req.params;
+
+        if (!routeno) {
+            return res.status(400).json({ message: "Route number is required." });
+        }
+
+        const customers = await CustomerModel.find({ routeno });
+
+        if (customers.length === 0) {
+            return res.status(404).json({ message: "No customers found for this route." });
+        }
+
+        res.status(200).json({ message: "Customers retrieved successfully.", customers });
+
     } catch (error) {
-        console.error("Error retrieving customers by route:", error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: "Internal server error.", error: error.message });
     }
 };
+
