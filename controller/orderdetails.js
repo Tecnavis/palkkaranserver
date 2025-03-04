@@ -656,28 +656,39 @@ exports.getCustomerInvoices = async (req, res) => {
             return res.status(404).json({ message: "No invoices found for this customer" });
         }
 
-        const formattedResponse = orders.map(order => ({
-            customer: order.customer,
-            invoiceDetails: {
-                invoiceNo: order._id,
-                paymentType: order.paymentMethod,
-                paymentStatus: order.paymentStatus,
-            },
-            orderItems: order.selectedPlanDetails?.dates
+        const formattedResponse = orders.map(order => {
+            let totalAmount = 0;
+
+            const orderItems = order.selectedPlanDetails?.dates
                 .filter(dateItem => dateItem.status === "delivered")
                 .map((dateItem, index) => ({
                     no: index + 1,
                     date: dateItem.date,
                     status: dateItem.status,
-                    products: order.productItems.map(item => ({
-                        product: item.product?.category || "N/A",
-                        quantity: item.quantity,
-                        routePrice: item.routePrice,
-                        subtotal: item.quantity * item.routePrice,
-                    })),
-                })),
-            total: order.productItems.reduce((acc, item) => acc + item.quantity * item.routePrice, 0),
-        }));
+                    products: order.productItems.map(item => {
+                        const subtotal = item.quantity * item.routePrice;
+                        totalAmount += subtotal; // Accumulate the total amount
+                        return {
+                            product: item.product?.category || "N/A",
+                            quantity: item.quantity,
+                            routePrice: item.routePrice,
+                            subtotal: subtotal,
+                        };
+                    }),
+                }));
+
+            return {
+                customer: order.customer,
+                invoiceDetails: {
+                    invoiceNo: order._id,
+                    paymentType: order.paymentMethod,
+                    paymentStatus: order.paymentStatus,
+                },
+                orderItems: orderItems,
+                total: totalAmount, // Corrected total amount
+                paidAmount: 0, // Default paid amount
+            };
+        });
 
         res.json(formattedResponse);
     } catch (error) {
@@ -685,6 +696,7 @@ exports.getCustomerInvoices = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 };
+
 
 // Example Endpoints
 // Daily Plan: { "orderId": "ORDER_ID", "newPlanType": "daily" }
