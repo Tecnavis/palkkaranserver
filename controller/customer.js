@@ -488,65 +488,124 @@ exports.updateCustomerImage = async (req, res) => {
 
 // Add a paid amount (temporary until confirmation)
 
-// Add a paid amount to the customer
+
+// Add paid amount (unconfirmed)
 exports.addPaidAmount = async (req, res) => {
     try {
-        const { customerId } = req.params;
-        const { amount } = req.body;
+        const { customerId, amount } = req.body;
 
-        if (!amount || amount <= 0) {
-            return res.status(400).json({ message: "Amount must be greater than zero." });
+        // Validate input
+        if (!customerId || !amount || amount <= 0) {
+            return res.status(400).json({ 
+                message: 'Invalid customer ID or amount' 
+            });
         }
 
+        // Find the customer
         const customer = await Customer.findOne({ customerId });
 
         if (!customer) {
-            return res.status(404).json({ message: "Customer not found." });
+            return res.status(404).json({ 
+                message: 'Customer not found' 
+            });
         }
 
-        const newPayment = {
-            amount,
+        // Add unconfirmed paid amount
+        customer.paidAmounts.push({
+            amount: amount,
             date: new Date(),
-            isGet: false, // Payment not confirmed yet
-        };
+            isGet: false // Initially set to unconfirmed
+        });
 
-        customer.paidAmounts.push(newPayment);
+        // Save the customer
         await customer.save();
 
-        res.status(200).json({ message: "Payment added successfully.", payment: newPayment });
-
+        res.status(201).json({
+            message: 'Paid amount added successfully',
+            paidAmount: customer.paidAmounts[customer.paidAmounts.length - 1]
+        });
     } catch (error) {
-        res.status(500).json({ message: "Internal server error.", error: error.message });
+        console.error('Error adding paid amount:', error);
+        res.status(500).json({ 
+            message: 'Internal server error', 
+            error: error.message 
+        });
     }
 };
 
-// Confirm the payment
-exports.confirmPayment = async (req, res) => {
+// Confirm paid amount
+exports.confirmPaidAmount = async (req, res) => {
     try {
-        const { customerId, paymentId } = req.params;
+        const { customerId, paidAmountId } = req.body;
 
+        // Validate input
+        if (!customerId || !paidAmountId) {
+            return res.status(400).json({ 
+                message: 'Customer ID and Paid Amount ID are required' 
+            });
+        }
+
+        // Find the customer
         const customer = await Customer.findOne({ customerId });
 
         if (!customer) {
-            return res.status(404).json({ message: "Customer not found." });
+            return res.status(404).json({ 
+                message: 'Customer not found' 
+            });
         }
 
-        const payment = customer.paidAmounts.id(paymentId);
+        // Find the specific paid amount
+        const paidAmountIndex = customer.paidAmounts.findIndex(
+            payment => payment._id.toString() === paidAmountId
+        );
 
-        if (!payment) {
-            return res.status(404).json({ message: "Payment record not found." });
+        if (paidAmountIndex === -1) {
+            return res.status(404).json({ 
+                message: 'Paid amount not found' 
+            });
         }
 
-        if (payment.isGet) {
-            return res.status(400).json({ message: "Payment already confirmed." });
-        }
+        // Confirm the paid amount
+        customer.paidAmounts[paidAmountIndex].isGet = true;
 
-        payment.isGet = true;
+        // Save the updated customer
         await customer.save();
 
-        res.status(200).json({ message: "Payment confirmed successfully.", payment });
-
+        res.status(200).json({
+            message: 'Paid amount confirmed successfully',
+            confirmedPayment: customer.paidAmounts[paidAmountIndex]
+        });
     } catch (error) {
-        res.status(500).json({ message: "Internal server error.", error: error.message });
+        console.error('Error confirming paid amount:', error);
+        res.status(500).json({ 
+            message: 'Internal server error', 
+            error: error.message 
+        });
+    }
+};
+
+// Get all paid amounts for a customer
+exports.getPaidAmounts = async (req, res) => {
+    try {
+        const { customerId } = req.params;
+
+        // Find the customer
+        const customer = await Customer.findOne({ customerId });
+
+        if (!customer) {
+            return res.status(404).json({ 
+                message: 'Customer not found' 
+            });
+        }
+
+        res.status(200).json({
+            paidAmounts: customer.paidAmounts
+        });
+    } catch (error) {
+        console.error('Error retrieving paid amounts:', error);
+        res.status(500).json({ 
+            message: 'Internal server error', 
+            error: error.message 
+        });
     }
 };

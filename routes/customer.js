@@ -34,8 +34,13 @@ router.get('/confirm/:customerId', Controller.confirmCustomer);
 router.put("/update-image/:customerId", upload.single("image"), Controller.updateCustomerImage);
 
 // Route to add a paid amount (temporary, awaiting confirmation)
+router.post('/add-paid-amount/customer', Controller.addPaidAmount);
 
-router.post("/add-paid-amount/:customerId", Controller.addPaidAmount);
-router.post("/confirm-payment/:customerId/:paymentId",Controller.confirmPayment);
+// Route to confirm a paid amount
+router.patch('/confirm-paid-amount/confirm', Controller.confirmPaidAmount);
+
+// Route to get all paid amounts for a customer
+router.get('/paid-amounts/:customerId', Controller.getPaidAmounts);
+
 //get all customers by routeno
 module.exports = router;
