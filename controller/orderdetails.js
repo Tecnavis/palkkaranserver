@@ -974,31 +974,31 @@ exports.getCustomerBottlesSummary = async (req, res) => {
 exports.getBottlesSummary = async (req, res) => {
     try {
         // Find all customers
-        const customers = await Customer.find();
+        const customers = await OrderProduct.find().populate("customer", "name email phone routeno");
         
         if (!customers.length) {
             return res.status(404).json({ message: "No customers found" });
         }
         
-        // Calculate total bottles for each customer
-        const summary = await Promise.all(customers.map(async (customer) => {
-            const orders = await OrderProduct.find({ customer: customer._id });
-            const totalBottles = orders.reduce((acc, order) => acc + order.bottles || 0, 0);
-            return {    
-                _id: customer._id,
-                name: customer.name,
-                email: customer.email,
-                phoneNumber: customer.phone,
-                routeNo: customer.routeno,
-                summary: {
-                    totalDeliveredBottles: totalBottles,
-                    totalReturnedBottles: orders.reduce((acc, order) => acc + order.returnedBottles || 0, 0),
-                    totalPendingBottles: orders.reduce((acc, order) => acc + order.pendingBottles || 0, 0)
-                }
-            };
-        }));
+        // Calculate totals
+        const summary = customers.reduce((acc, customer) => {
+            acc.totalDeliveredBottles += customer.bottles || 0;
+            acc.totalReturnedBottles += customer.returnedBottles || 0;
+            acc.totalPendingBottles += customer.pendingBottles || 0;
+            return acc;
+        }, { 
+            totalDeliveredBottles: 0, 
+            totalReturnedBottles: 0, 
+            totalPendingBottles: 0 
+        });
         
-        res.status(200).json(summary);
+        res.status(200).json({
+            success: true,
+            customers,
+            summary
+        });
+        
+       
     } catch (error) {
         console.error("Error fetching bottles summary:", error);
         res.status(500).json({ error: "Internal server error" });
