@@ -17,10 +17,10 @@ const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 const otpStorage = new Map();
 
 exports.login = asyncHandler(async (req, res) => {
-    const { phone, password } = req.body;
+    let { phone, password } = req.body;
 
-     // Ensure +91 prefix with space
-     if (!phone.startsWith("+91")) {
+    // Ensure +91 prefix with space
+    if (!phone.startsWith("+91")) {
         phone = "+91 " + phone.replace(/^\+91\s*/, '').trim();
     }
 
