@@ -645,7 +645,7 @@ exports. getTomorrowOrders = async (req, res) => {
 };
 
 //today orders
-exports. getTodayOrders = async (req, res) => {
+exports.getTodayOrders = async (req, res) => {
     try {
         const today = new Date().toISOString().split("T")[0]; // Format YYYY-MM-DD
 
@@ -655,7 +655,12 @@ exports. getTodayOrders = async (req, res) => {
                 $gte: new Date(today),
                 $lt: new Date(`${today}T23:59:59.999Z`)
             }
-        }).populate("customer").populate("productItems.product");
+        })
+        .populate("customer")
+        .populate({
+            path: "productItems.product",
+            populate: { path: "category" } // Ensure category is populated
+        });
 
         // Group orders by route number
         const routeData = {};
@@ -664,25 +669,32 @@ exports. getTodayOrders = async (req, res) => {
             const routeNo = order.customer?.routeno || "Unassigned";
 
             if (!routeData[routeNo]) {
-                routeData[routeNo] = {
-                    quantities: {},
-                    totalLiters: 0
-                };
+                routeData[routeNo] = {};
             }
 
             order.productItems.forEach(item => {
-                const productSize = item.product?.quantity; // e.g., "100ML"
+                const product = item.product;
+                const productSize = product?.quantity; // e.g., "100ML"
+                const category = product?.category?.name || "Uncategorized"; // Ensure category name exists
                 const quantity = item.quantity;
 
                 if (productSize) {
-                    // Count quantities per route
-                    routeData[routeNo].quantities[productSize] =
-                        (routeData[routeNo].quantities[productSize] || 0) + quantity;
+                    // Initialize category if not exists
+                    if (!routeData[routeNo][category]) {
+                        routeData[routeNo][category] = {
+                            quantities: {},
+                            totalLiters: 0
+                        };
+                    }
+
+                    // Count quantities per category
+                    routeData[routeNo][category].quantities[productSize] =
+                        (routeData[routeNo][category].quantities[productSize] || 0) + quantity;
 
                     // Convert to Liters
                     const sizeInML = parseInt(productSize.match(/\d+/)[0], 10);
                     const totalML = sizeInML * quantity;
-                    routeData[routeNo].totalLiters += totalML / 1000; // Convert ML to Liters
+                    routeData[routeNo][category].totalLiters += totalML / 1000; // Convert ML to Liters
                 }
             });
         });
@@ -693,6 +705,7 @@ exports. getTodayOrders = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
+
 //
 // Get filtered invoices
 exports.getCustomerInvoices = async (req, res) => {
