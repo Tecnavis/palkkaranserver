@@ -215,13 +215,24 @@ exports.get = asyncHandler(async (req, res) => {
 //update customer
 
 exports.update = asyncHandler(async (req, res) => {
-    const { name, password, phone,location,address,routeno,routename,email } = req.body;
+    let { name, password, phone,location,address,routeno,routename,email } = req.body;
     const { id } = req.params;
     try {
         const customer = await CustomerModel.findById(id);
         if (!customer) {
             return res.status(400).json({ message: "Customer not found to update" });
         }
+         // Validate and format phone number
+         if (phone) {
+            phone = phone.replace(/^\+91\s*/, '').replace(/\s/g, ''); // Remove existing +91 and spaces
+
+            if (!/^\d{10}$/.test(phone)) {
+                return res.status(400).json({ message: "Phone number must be exactly 10 digits" });
+            }
+
+            phone = "+91 " + phone; // Ensure +91 with space
+        }
+
         customer.name = name;
         customer.password = password;
         customer.phone = phone;
