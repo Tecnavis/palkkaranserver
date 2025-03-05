@@ -414,6 +414,7 @@ exports.stopPlan = async (req, res) => {
 
 
 const mongoose = require("mongoose");
+const customer = require("../models/customer");
 
 exports.changePlan = async (req, res) => {
     const { orderId, newPlanType, customDates, weeklyDays, interval, startDate } = req.body;
@@ -797,7 +798,7 @@ exports.updateReturnedBottles = async (req, res) => {
         }
         
         // Find the order by ID
-        const order = await OrderProduct.findById(customerId);
+        const order = await OrderProduct.findById({customer: customerId});
         
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
