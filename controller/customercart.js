@@ -68,7 +68,7 @@ exports.create = asyncHandler(async (req, res) => {
 exports.getByCustomerId = async (req, res) => {
     try {
       const customerId = req.params.customerId;
-      const customerCart = await CustomerCart.find({ customerId }).populate('productId', ' category discount quantity description images coverimage'); // Populate Product details
+      const customerCart = await CustomerCart.find({ customerId }).populate('productId', ' category discount quantity title description images coverimage'); // Populate Product details
       ;
       if (!customerCart) {
         return res.status(404).json({ message: 'Wishlist not found' });
