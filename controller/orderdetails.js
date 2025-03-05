@@ -990,7 +990,11 @@ exports.getBottlesSummary = async (req, res) => {
                 email: customer.email,
                 phoneNumber: customer.phone,
                 routeNo: customer.routeno,
-                totalBottles
+                summary: {
+                    totalDeliveredBottles: totalBottles,
+                    totalReturnedBottles: orders.reduce((acc, order) => acc + order.returnedBottles || 0, 0),
+                    totalPendingBottles: orders.reduce((acc, order) => acc + order.pendingBottles || 0, 0)
+                }
             };
         }));
         
