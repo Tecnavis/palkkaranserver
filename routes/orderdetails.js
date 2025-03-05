@@ -4,7 +4,11 @@ const orderController = require("../controller/orderdetails");
 
 // Route to create an order
 router.post("/", orderController.createOrder);
+// Route to update date and status to deliver
 router.patch("/:orderId", orderController.updateDateStatus);
+// Route to update date and status to pending
+router.patch("/pending/:orderId", orderController.updateDateStatusToPending);
+
 router.get('/', orderController.getAllOrders);
 router.get('/most-ordered', orderController.getMostOrderedProducts);
 
