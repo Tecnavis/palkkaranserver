@@ -32,6 +32,7 @@ const orderProductSchema = new mongoose.Schema({
     Total: { type: Number, default: 0 },
     paymentStatus: { type: String, default: "unpaid" },
     planisActive: { type: Boolean, default: true },
+    bottles: { type: Number, default: 0 },
 }, { timestamps: true });
 
 

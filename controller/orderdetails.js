@@ -268,7 +268,7 @@ exports.getOrdersByCustomerId = async (req, res) => {
             .populate("customer", "name email phoneNumber") // Populate customer details
             .populate({
                 path: "productItems.product", // Populate product details for each product item
-                select: "name price description", // Select specific fields from the Product model
+                select: "name price description category", // Select specific fields from the Product model
             })
             .populate("plan", "planType").populate("selectedPlanDetails", "planType isActive dates status"); // Optionally populate plan details
 
