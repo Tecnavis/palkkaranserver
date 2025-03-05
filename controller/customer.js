@@ -62,7 +62,12 @@ exports.login = asyncHandler(async (req, res) => {
 
 
 exports.verifyOtp = asyncHandler(async (req, res) => {
-    const { phone, otp } = req.body;
+    let { phone, otp } = req.body;
+
+    // Ensure +91 prefix with space
+    if (!phone.startsWith("+91")) {
+        phone = "+91 " + phone.replace(/^\+91\s*/, '').trim();
+    }
 
     // Check if OTP is valid
     const storedOtp = otpStorage.get(phone);
