@@ -125,8 +125,9 @@ const generateCustomerId = async () => {
 };
 
 exports.create = asyncHandler(async (req, res) => {
-    const { name, password, phone, location, address, routeno, routename, email } = req.body;
+    let { name, password, phone, location, address, routeno, routename, email } = req.body;
 
+    // Validate phone number
     if (!phone) {
         return res.status(400).json({ message: "Phone number is required" });
     }
@@ -142,7 +143,7 @@ exports.create = asyncHandler(async (req, res) => {
     // Add +91 prefix
     const formattedPhone = '+91' + phone;
 
-    if (!password || !phone) {
+    if (!password) {
         return res.status(400).json({ message: "Please add all required fields" });
     }
 
@@ -160,7 +161,7 @@ exports.create = asyncHandler(async (req, res) => {
     }
 
     // Check if customer already exists
-    const customerExists = await CustomerModel.findOne({ phone });
+    const customerExists = await CustomerModel.findOne({ phone: formattedPhone });
     if (customerExists) {
         return res.status(400).json({ message: "Phone number already exists" });
     }
@@ -168,12 +169,12 @@ exports.create = asyncHandler(async (req, res) => {
     // Generate a new customerId
     const customerId = await generateCustomerId();
 
-    // Create the new customer; note that isConfirmed is false by default.
+    // Create the new customer
     const customer = await CustomerModel.create({
         customerId,
         name,
         password,
-        phone:formattedPhone,
+        phone: formattedPhone,
         location,
         address: parsedAddress,
         routeno,
@@ -182,7 +183,6 @@ exports.create = asyncHandler(async (req, res) => {
     });
 
     if (customer) {
-        // Optionally, send a confirmation email or message here.
         res.status(201).json({
             _id: customer._id,
             customerId: customer.customerId,
