@@ -788,7 +788,7 @@ exports.getCustomerInvoices = async (req, res) => {
 
 exports.updateReturnedBottles = async (req, res) => {
     try {
-        const { orderId } = req.params;
+        const { customerId } = req.params;
         const { returnedBottles } = req.body;
         
         // Validate input
@@ -797,7 +797,7 @@ exports.updateReturnedBottles = async (req, res) => {
         }
         
         // Find the order by ID
-        const order = await OrderProduct.findById(orderId);
+        const order = await OrderProduct.findById(customerId);
         
         if (!order) {
             return res.status(404).json({ message: "Order not found" });

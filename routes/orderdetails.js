@@ -33,7 +33,7 @@ router.get("/invoices/:customerId", orderController.getCustomerInvoices);
 
 // In your routes file
 router.get("/orders/customer/:customerId", orderController.getOrdersByCustomerId);
-router.put('/orders/:orderId/returned-bottles', orderController.updateReturnedBottles);
+router.put('/orders/:customerId/returned-bottles', orderController.updateReturnedBottles);
 
 // Get bottles summary for a customer
 router.get('/customers/:customerId/bottles-summary', orderController.getCustomerBottlesSummary);
