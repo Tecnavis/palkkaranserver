@@ -14,6 +14,7 @@ router.get('/most-ordered', orderController.getMostOrderedProducts);
 
 router.delete('/:id', orderController.delete);
 router.get("/:customerId", orderController.getOrdersByCustomerId);
+
 // Get selected plan details by customer ID
 router.get("/selected-plan/:customerId", orderController.getSelectedPlanByCustomer);//
 // Get product items by customer ID
@@ -28,4 +29,11 @@ router.get("/tomorrow-orders/routes", orderController.getTomorrowOrders);
 router.get("/today-orders/routes", orderController.getTodayOrders);
 
 router.get("/invoices/:customerId", orderController.getCustomerInvoices);
+
+
+// In your routes file
+router.get("/orders/customer/:customerId", orderController.getOrdersByCustomerId);
+router.put("/orders/:orderId/update-bottles", orderController.updateBottlesCount);
+router.post("/orders/recalculate-bottles", orderController.recalculateAllBottlesCounts);
+
 module.exports = router;

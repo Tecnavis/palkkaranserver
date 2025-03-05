@@ -781,3 +781,157 @@ exports.getCustomerInvoices = async (req, res) => {
 // Weekly Plan: { "orderId": "ORDER_ID", "newPlanType": "weekly", "weeklyDays": [1, 3, 5] }
 // Alternative Plan: { "orderId": "ORDER_ID", "newPlanType": "alternative", "startDate": "2025-02-06", "interval": 2 }
 // Monthly Plan: { "orderId": "ORDER_ID", "newPlanType": "monthly" }
+
+
+exports.updateBottlesCount = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        // Find the order by ID
+        const order = await OrderProduct.findById(orderId)
+            .populate({
+                path: "productItems.product",
+                select: "category"
+            });
+            
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+        
+        // Calculate total bottles delivered
+        let totalBottles = 0;
+        
+        // Check delivered dates for bottle products
+        if (order.selectedPlanDetails && order.selectedPlanDetails.dates) {
+            const deliveredDates = order.selectedPlanDetails.dates.filter(
+                date => date.status === "delivered"
+            );
+            
+            // For each delivered date, count bottles
+            deliveredDates.forEach(date => {
+                // Count bottles from order items
+                order.productItems.forEach(item => {
+                    if (item.product && item.product.category === "bottle") {
+                        totalBottles += item.quantity;
+                    }
+                });
+            });
+        }
+        
+        // Update the order with the new bottles count
+        order.bottles = totalBottles;
+        await order.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            bottles: totalBottles,
+            message: "Bottles count updated successfully" 
+        });
+    } catch (error) {
+        console.error("Error updating bottles count:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+
+exports.recalculateAllBottlesCounts = async (req, res) => {
+    try {
+        // Get all orders
+        const orders = await OrderProduct.find({})
+            .populate({
+                path: "productItems.product",
+                select: "category"
+            });
+        
+        // Process each order to update bottles count
+        const updatedOrdersCount = await Promise.all(orders.map(async (order) => {
+            let bottlesCount = 0;
+            
+            // Get delivered dates
+            const deliveredDates = order.selectedPlanDetails.dates.filter(
+                date => date.status === "delivered"
+            );
+            
+            // For each delivered date, count bottles from bottle products
+            deliveredDates.forEach(() => {
+                order.productItems.forEach(item => {
+                    if (item.product && item.product.category === "bottle") {
+                        bottlesCount += item.quantity;
+                    }
+                });
+            });
+            
+            // Update the bottles count if needed
+            if (order.bottles !== bottlesCount) {
+                order.bottles = bottlesCount;
+                await order.save();
+                return true; // Order was updated
+            }
+            
+            return false; // No update needed
+        }));
+        
+        // Count number of orders updated
+        const totalUpdated = updatedOrdersCount.filter(updated => updated).length;
+        
+        res.status(200).json({
+            success: true,
+            message: `Successfully recalculated bottles count for ${totalUpdated} orders out of ${orders.length} total orders.`
+        });
+    } catch (error) {
+        console.error("Error recalculating all bottles counts:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.getOrdersByCustomerId = async (req, res) => {
+    try {
+        const { customerId } = req.params;
+
+        // Find orders for the given customer ID
+        const orders = await OrderProduct.find({ customer: customerId })
+            .populate("customer", "name email phoneNumber")
+            .populate({
+                path: "productItems.product",
+                select: "name price description category",
+            })
+            .populate("plan", "planType")
+            .populate("selectedPlanDetails", "planType isActive dates status");
+
+        if (!orders.length) {
+            return res.status(404).json({ message: "No orders found for this customer" });
+        }
+
+        // Update bottles count for each order
+        const updatedOrders = await Promise.all(orders.map(async (order) => {
+            let bottlesCount = 0;
+            
+            // Filter for delivered dates
+            const deliveredDates = order.selectedPlanDetails.dates.filter(
+                date => date.status === "delivered"
+            );
+            
+            // Count bottles from bottle category products for delivered dates
+            deliveredDates.forEach(() => {
+                order.productItems.forEach(item => {
+                    if (item.product && item.product.category === "bottle") {
+                        bottlesCount += item.quantity;
+                    }
+                });
+            });
+            
+            // Update the order's bottles count if it has changed
+            if (order.bottles !== bottlesCount) {
+                order.bottles = bottlesCount;
+                await order.save();
+            }
+            
+            return order;
+        }));
+
+        res.status(200).json(updatedOrders);
+    } catch (error) {
+        console.error("Error fetching orders by customer ID:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
