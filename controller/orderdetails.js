@@ -675,7 +675,7 @@ exports.getTodayOrders = async (req, res) => {
             order.productItems.forEach(item => {
                 const product = item.product;
                 const productSize = product?.quantity; // e.g., "100ML"
-                const category = product?.category?.name || "Uncategorized"; // Ensure category name exists
+                const category = product?.category || "Uncategorized"; // Ensure category name exists
                 const quantity = item.quantity;
 
                 if (productSize) {
