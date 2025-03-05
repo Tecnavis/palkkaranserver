@@ -864,12 +864,12 @@ exports.getOrdersByCustomerId = async (req, res) => {
         // Find orders for the given customer ID
         const orders = await OrderProduct.find({ customer: customerId })
             .populate("customer", "name email phoneNumber")
-            // .populate({
-            //     path: "productItems.product",
-            //     select: "name price description category",
-            // })
-            // .populate("plan", "planType")
-            // .populate("selectedPlanDetails", "planType isActive dates status");
+            .populate({
+                path: "productItems.product",
+                select: "name price description category",
+            })
+            .populate("plan", "planType")
+            .populate("selectedPlanDetails", "planType isActive dates status");
 
         if (!orders.length) {
             return res.status(404).json({ message: "No orders found for this customer" });
@@ -924,6 +924,14 @@ exports.getCustomerBottlesSummary = async (req, res) => {
     try {
         const { customerId } = req.params;
         
+        // Find customer details
+        const customer = await Customer.findById(customerId)
+            .select("name email phone routeno");
+        
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+        
         // Find all orders for this customer
         const orders = await OrderProduct.find({ customer: customerId });
         
@@ -943,9 +951,16 @@ exports.getCustomerBottlesSummary = async (req, res) => {
             totalPendingBottles: 0 
         });
         
+        
         res.status(200).json({
             success: true,
-            customerId,
+            customer: {
+                _id: customer._id,
+                name: customer.name,
+                email: customer.email,
+                phoneNumber: customer.phone,
+                routeNo: customer.routeno
+            },
             summary
         });
     } catch (error) {
