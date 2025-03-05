@@ -59,24 +59,28 @@ exports.createPlan = async (req, res) => {
                 break;
 
                 case "weekly":
-    if (!weeklyDays || !Array.isArray(weeklyDays)) {
-        return res.status(400).json({ message: "Invalid weekly days" });
-    }
-
-    const weeksToGenerate = 12; // Number of weeks to generate future dates
-    const today = getStartDate(); // Use adjusted start date
-
-    weeklyDays.forEach(day => {
-        let currentDate = new Date(today);
-        let offset = (day - currentDate.getDay() + 7) % 7;
-        currentDate.setDate(currentDate.getDate() + offset);
-
-        for (let i = 0; i < weeksToGenerate; i++) {
-            dates.push(new Date(currentDate));
-            currentDate.setDate(currentDate.getDate() + 7);
-        }
-    });
-    break;
+                    if (!weeklyDays || !Array.isArray(weeklyDays)) {
+                        return res.status(400).json({ message: "Invalid weekly days" });
+                    }
+                
+                    const startDates = getStartDate(); // Get adjusted start date
+                    const daysToGenerate = 90; // Generate for 90 days
+                
+                    for (let day of weeklyDays) {
+                        let currentDate = new Date(startDates);
+                        let offset = (day - currentDate.getDay() + 7) % 7;
+                        currentDate.setDate(currentDate.getDate() + offset); // Move to the correct weekday
+                
+                        while (currentDate <= new Date(startDates.getTime() + daysToGenerate * 86400000)) {
+                            dates.push(new Date(currentDate)); // Add to the list
+                            currentDate.setDate(currentDate.getDate() + 7); // Move to next week
+                        }
+                    }
+                
+                    // Sort the dates to ensure correct order
+                    dates.sort((a, b) => a - b);
+                    break;
+                
 
 case "alternative":
     const { startDate, interval } = req.body;
