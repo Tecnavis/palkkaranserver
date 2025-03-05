@@ -592,8 +592,7 @@ exports. getOrdersByRoute = async (req, res) => {
 
 
 //tomorrow orders
-
-exports. getTomorrowOrders = async (req, res) => {
+exports.getTomorrowOrders = async (req, res) => {
     try {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -605,7 +604,12 @@ exports. getTomorrowOrders = async (req, res) => {
                 $gte: new Date(tomorrowDateStr),
                 $lt: new Date(`${tomorrowDateStr}T23:59:59.999Z`)
             }
-        }).populate("customer").populate("productItems.product");
+        })
+        .populate("customer")
+        .populate({
+            path: "productItems.product",
+            populate: { path: "category" } // Ensure category is populated
+        });
 
         // Group orders by route number
         const routeData = {};
@@ -614,25 +618,32 @@ exports. getTomorrowOrders = async (req, res) => {
             const routeNo = order.customer?.routeno || "Unassigned";
 
             if (!routeData[routeNo]) {
-                routeData[routeNo] = {
-                    quantities: {},
-                    totalLiters: 0
-                };
+                routeData[routeNo] = {};
             }
 
             order.productItems.forEach(item => {
-                const productSize = item.product?.quantity; // e.g., "100ML"
+                const product = item.product;
+                const productSize = product?.quantity; // e.g., "100ML"
+                const category = product?.category || "Uncategorized"; // Ensure category name exists
                 const quantity = item.quantity;
 
                 if (productSize) {
-                    // Count quantities per route
-                    routeData[routeNo].quantities[productSize] =
-                        (routeData[routeNo].quantities[productSize] || 0) + quantity;
+                    // Initialize category if not exists
+                    if (!routeData[routeNo][category]) {
+                        routeData[routeNo][category] = {
+                            quantities: {},
+                            totalLiters: 0
+                        };
+                    }
+
+                    // Count quantities per category
+                    routeData[routeNo][category].quantities[productSize] =
+                        (routeData[routeNo][category].quantities[productSize] || 0) + quantity;
 
                     // Convert to Liters
                     const sizeInML = parseInt(productSize.match(/\d+/)[0], 10);
                     const totalML = sizeInML * quantity;
-                    routeData[routeNo].totalLiters += totalML / 1000; // Convert ML to Liters
+                    routeData[routeNo][category].totalLiters += totalML / 1000; // Convert ML to Liters
                 }
             });
         });
@@ -643,6 +654,7 @@ exports. getTomorrowOrders = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
+
 
 //today orders
 exports.getTodayOrders = async (req, res) => {
