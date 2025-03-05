@@ -973,7 +973,8 @@ exports.getCustomerBottlesSummary = async (req, res) => {
 //get bottles summary for all customers
 exports.getBottlesSummary = async (req, res) => {
     try {
-        // Fetch all customers and their orders
+        console.log("Fetching all customers...");
+
         const customers = await Customer.find({})
             .populate({
                 path: "orders",
@@ -987,17 +988,19 @@ exports.getBottlesSummary = async (req, res) => {
                 ]
             });
 
+        console.log("Customers fetched:", customers.length);
+
         if (!customers.length) {
             return res.status(404).json({ message: "No customers found" });
         }
 
-        // Map customers with updated bottle counts
         const updatedCustomers = await Promise.all(customers.map(async (customer) => {
+            console.log(`Processing customer: ${customer.name}`);
+
             const orders = await Promise.all(customer.orders.map(async (order) => {
                 let totalBottles = 0;
-
-                // Calculate delivered bottles
                 const deliveredDates = order.selectedPlanDetails?.dates.filter(date => date.status === "delivered") || [];
+
                 deliveredDates.forEach(() => {
                     order.productItems.forEach(item => {
                         if (item.product && item.product.category === "bottle") {
@@ -1034,6 +1037,6 @@ exports.getBottlesSummary = async (req, res) => {
         res.status(200).json(updatedCustomers);
     } catch (error) {
         console.error("Error fetching all customers:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Internal server error", details: error.message });
     }
 };
