@@ -2,25 +2,37 @@ const Plan = require("../models/plans");
 const Customer = require("../models/customer");
 
 // Utility function to calculate 30 days from the current date
+const getStartDate = () => {
+    const now = new Date();
+    if (now.getHours() >= 6) {
+        now.setDate(now.getDate() + 1); // Move to the next day if current time is past 6 AM
+    }
+    now.setHours(0, 0, 0, 0); // Reset time to midnight
+    return now;
+};
+
 const calculateMonthlyDates = () => {
-    const today = new Date();
+    const startDate = getStartDate();
     const dates = [];
     for (let i = 0; i < 30; i++) {
-        const newDate = new Date(today);
-        newDate.setDate(today.getDate() + i);
-        dates.push(newDate);
-    }
-    return dates;
-};const calculateDailyDates = () => {
-    const today = new Date();
-    const dates = [];
-    for (let i = 0; i < 90; i++) {
-        const newDate = new Date(today);
-        newDate.setDate(today.getDate() + i);
+        const newDate = new Date(startDate);
+        newDate.setDate(startDate.getDate() + i);
         dates.push(newDate);
     }
     return dates;
 };
+
+const calculateDailyDates = () => {
+    const startDate = getStartDate();
+    const dates = [];
+    for (let i = 0; i < 90; i++) {
+        const newDate = new Date(startDate);
+        newDate.setDate(startDate.getDate() + i);
+        dates.push(newDate);
+    }
+    return dates;
+};
+
 
 
 // Create a new plan for a customer
@@ -47,47 +59,52 @@ exports.createPlan = async (req, res) => {
                 break;
 
                 case "weekly":
-                    if (!weeklyDays || !Array.isArray(weeklyDays)) {
-                        return res.status(400).json({ message: "Invalid weekly days" });
-                    }
-                
-                    const weeksToGenerate = 12; // Number of weeks to generate future dates (about 3 months)
-                    const today = new Date();
-                
-                    weeklyDays.forEach(day => {
-                        let currentDate = new Date();
-                        let offset = (day - currentDate.getDay() + 7) % 7; // Calculate offset to the next selected day
-                        currentDate.setDate(currentDate.getDate() + offset); // Set to the next occurrence of the selected day
-                
-                        for (let i = 0; i < weeksToGenerate; i++) {
-                            dates.push(new Date(currentDate)); // Add the calculated date to the list
-                            currentDate.setDate(currentDate.getDate() + 7); // Move to the next week's same day
-                        }
-                    });
-                    break;
-                
+    if (!weeklyDays || !Array.isArray(weeklyDays)) {
+        return res.status(400).json({ message: "Invalid weekly days" });
+    }
 
-                case "alternative":
-                    const { startDate, interval } = req.body; // Expect startDate and interval (e.g., every 2 days)
-                    if (!startDate || !interval || typeof interval !== "number") {
-                        return res.status(400).json({ message: "Invalid alternative plan details" });
-                    }
-                
-                    const altStartDate = new Date(startDate);
-                    for (let i = 0; i < 15; i++) { // Generate 15 alternative dates dynamically
-                        let nextDate = new Date(altStartDate);
-                        nextDate.setDate(altStartDate.getDate() + i * interval);
-                        dates.push(nextDate);
-                    }
-                    break;
-                
+    const weeksToGenerate = 12; // Number of weeks to generate future dates
+    const today = getStartDate(); // Use adjusted start date
+
+    weeklyDays.forEach(day => {
+        let currentDate = new Date(today);
+        let offset = (day - currentDate.getDay() + 7) % 7;
+        currentDate.setDate(currentDate.getDate() + offset);
+
+        for (let i = 0; i < weeksToGenerate; i++) {
+            dates.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 7);
+        }
+    });
+    break;
+
+case "alternative":
+    const { startDate, interval } = req.body;
+    if (!startDate || !interval || typeof interval !== "number") {
+        return res.status(400).json({ message: "Invalid alternative plan details" });
+    }
+
+    let altStartDate = new Date(startDate);
+    if (altStartDate.getHours() >= 6) {
+        altStartDate.setDate(altStartDate.getDate() + 1);
+    }
+    altStartDate.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 15; i++) {
+        let nextDate = new Date(altStartDate);
+        nextDate.setDate(altStartDate.getDate() + i * interval);
+        dates.push(nextDate);
+    }
+    break;
+
 
             case "monthly":
                 dates = calculateMonthlyDates();
                 break;
                 case "none":
-    dates.push(new Date()); // Ensure the current date is included
-    break;                
+                    dates.push(getStartDate()); 
+                    break;
+                           
                
             default:
                 return res.status(400).json({ message: "Invalid plan type" });
