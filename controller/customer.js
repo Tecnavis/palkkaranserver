@@ -17,7 +17,7 @@ const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 const otpStorage = new Map();
 
 exports.login = asyncHandler(async (req, res) => {
-    let { phone, password } = req.body;
+    let { phone } = req.body;
 
     // Ensure +91 prefix with space
     if (!phone.startsWith("+91")) {
@@ -27,18 +27,12 @@ exports.login = asyncHandler(async (req, res) => {
     // Check if customer exists
     const customer = await CustomerModel.findOne({ phone });
     if (!customer) {
-        return res.status(400).json({ message: "Incorrect phone number or password" });
+        return res.status(400).json({ message: "Phone number not registered" });
     }
 
     // Check if account is confirmed
     if (!customer.isConfirmed) {
         return res.status(400).json({ message: "Your account is not confirmed. Please confirm your account before logging in." });
-    }
-
-    // Verify password
-    const isPasswordMatch = await bcrypt.compare(password, customer.password);
-    if (!isPasswordMatch) {
-        return res.status(400).json({ message: "Incorrect phone number or password" });
     }
 
     // Generate OTP (6-digit random number)
