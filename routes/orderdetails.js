@@ -33,9 +33,9 @@ router.get("/invoices/:customerId", orderController.getCustomerInvoices);
 
 // In your routes file
 router.get("/orders/customer/:customerId", orderController.getOrdersByCustomerId);
-router.put('/orders/:orderId/returned-bottles', bottlesController.updateReturnedBottles);
+router.put('/orders/:orderId/returned-bottles', orderController.updateReturnedBottles);
 
 // Get bottles summary for a customer
-router.get('/customers/:customerId/bottles-summary', bottlesController.getCustomerBottlesSummary);
+router.get('/customers/:customerId/bottles-summary', orderController.getCustomerBottlesSummary);
 
 module.exports = router;
