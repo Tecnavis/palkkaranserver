@@ -102,9 +102,12 @@ exports.updateDateStatus = async (req, res) => {
             return res.status(404).json({ error: "Order not found" });
         }
 
-        // Find the specific date in the dates array
+        // Convert provided date to YYYY-MM-DD format
+        const formattedDate = new Date(date).toISOString().split("T")[0]; 
+
+        // Find the specific date in the dates array, ignoring time
         const dateToUpdate = order.selectedPlanDetails.dates.find(
-            (d) => new Date(d.date).toISOString() === new Date(date).toISOString()
+            (d) => new Date(d.date).toISOString().split("T")[0] === formattedDate
         );
 
         if (!dateToUpdate) {
@@ -137,6 +140,7 @@ exports.updateDateStatus = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
 
 
 exports.getAllOrders = async (req, res) => {
