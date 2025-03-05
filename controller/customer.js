@@ -127,16 +127,24 @@ const generateCustomerId = async () => {
 exports.create = asyncHandler(async (req, res) => {
     const { name, password, phone, location, address, routeno, routename, email } = req.body;
 
+    if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+    }
+
+    // Remove any existing +91 prefix and whitespace
+    phone = phone.replace(/^\+91\s*/, '').replace(/\s/g, '');
+
+    // Validate phone number is exactly 10 digits
+    if (!/^\d{10}$/.test(phone)) {
+        return res.status(400).json({ message: "Phone number must be exactly 10 digits" });
+    }
+
+    // Add +91 prefix
+    const formattedPhone = '+91' + phone;
+
     if (!password || !phone) {
         return res.status(400).json({ message: "Please add all required fields" });
     }
-
-    // Ensure phone starts with +91 and has exactly 10 digits
-    phone = phone.replace(/\D/g, ""); // Remove non-numeric characters
-    if (phone.length !== 10) {
-        return res.status(400).json({ message: "Phone number must be exactly 10 digits" });
-    }
-    phone = `+91 ${phone}`;
 
     // Validate and parse address
     let parsedAddress = [];
@@ -165,7 +173,7 @@ exports.create = asyncHandler(async (req, res) => {
         customerId,
         name,
         password,
-        phone,
+        phone:formattedPhone,
         location,
         address: parsedAddress,
         routeno,

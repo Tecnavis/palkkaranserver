@@ -27,8 +27,7 @@ const customerSchema = new mongoose.Schema({
     phone: {
         type: String,
         required: true,
-        unique: true,
-        match: [/^\+91\d{10}$/, "Phone number must be in format +911234567890"]
+        unique: true
     },
     image: {
         type: String
