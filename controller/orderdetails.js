@@ -864,12 +864,12 @@ exports.getOrdersByCustomerId = async (req, res) => {
         // Find orders for the given customer ID
         const orders = await OrderProduct.find({ customer: customerId })
             .populate("customer", "name email phoneNumber")
-            .populate({
-                path: "productItems.product",
-                select: "name price description category",
-            })
-            .populate("plan", "planType")
-            .populate("selectedPlanDetails", "planType isActive dates status");
+            // .populate({
+            //     path: "productItems.product",
+            //     select: "name price description category",
+            // })
+            // .populate("plan", "planType")
+            // .populate("selectedPlanDetails", "planType isActive dates status");
 
         if (!orders.length) {
             return res.status(404).json({ message: "No orders found for this customer" });
