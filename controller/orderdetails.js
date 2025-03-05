@@ -787,7 +787,7 @@ exports.getCustomerInvoices = async (req, res) => {
 
 // Controller file: bottlesController.js
 
-exports.updateReturnedBottles = async (req, res) => {
+exports.updateReturnedBottlesByCustomer = async (req, res) => {
     try {
         const { customerId } = req.params;
         const { returnedBottles } = req.body;
@@ -797,34 +797,65 @@ exports.updateReturnedBottles = async (req, res) => {
             return res.status(400).json({ message: "Valid returnedBottles value is required" });
         }
         
-        // Find the order by ID
-        const order = await OrderProduct.findById({customer: customerId});
+        // Find all orders for this customer
+        const orders = await OrderProduct.find({ customer: customerId });
         
-        if (!order) {
-            return res.status(404).json({ message: "Order not found" });
+        if (!orders.length) {
+            return res.status(404).json({ message: "No orders found for this customer" });
         }
         
-        // Update returned bottles count
-        order.returnedBottles = returnedBottles;
+        // Calculate total delivered bottles across all orders
+        const totalDeliveredBottles = orders.reduce((total, order) => total + (order.bottles || 0), 0);
         
-        // Calculate pending bottles (total delivered bottles - returned bottles)
-        order.pendingBottles = Math.max(0, order.bottles - order.returnedBottles);
+        // Make sure returned bottles don't exceed total delivered
+        const validReturnedBottles = Math.min(returnedBottles, totalDeliveredBottles);
         
-        await order.save();
+        // Determine how many bottles to allocate to each order
+        let remainingToAllocate = validReturnedBottles;
+        
+        // Process orders to allocate returned bottles
+        const updatedOrders = await Promise.all(orders.map(async (order) => {
+            // Skip orders with no bottles
+            if (!order.bottles || order.bottles <= 0) {
+                return order;
+            }
+            
+            // Determine how many bottles to allocate to this order
+            const bottlesToAllocate = Math.min(remainingToAllocate, order.bottles);
+            
+            // Update this order's returned bottles
+            order.returnedBottles = bottlesToAllocate;
+            
+            // Calculate pending bottles
+            order.pendingBottles = Math.max(0, order.bottles - order.returnedBottles);
+            
+            // Reduce remaining bottles to allocate
+            remainingToAllocate -= bottlesToAllocate;
+            
+            // Save the order
+            await order.save();
+            
+            return order;
+        }));
+        
+        // Calculate summary
+        const summary = {
+            totalDeliveredBottles,
+            totalReturnedBottles: validReturnedBottles,
+            totalPendingBottles: totalDeliveredBottles - validReturnedBottles
+        };
         
         res.status(200).json({
             success: true,
-            bottles: order.bottles,
-            returnedBottles: order.returnedBottles,
-            pendingBottles: order.pendingBottles,
-            message: "Returned bottles updated successfully"
+            customerId,
+            summary,
+            message: `Updated returned bottles for customer. ${validReturnedBottles} bottles returned out of ${totalDeliveredBottles} delivered.`
         });
     } catch (error) {
-        console.error("Error updating returned bottles:", error);
+        console.error("Error updating returned bottles by customer:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 };
-
 // Modified getOrdersByCustomerId to include bottles information
 exports.getOrdersByCustomerId = async (req, res) => {
     try {
