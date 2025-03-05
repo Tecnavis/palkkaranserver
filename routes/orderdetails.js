@@ -38,6 +38,6 @@ router.put('/orders/:customerId/returned-bottles', orderController.updateReturne
 // Get bottles summary for a customer
 router.get('/customers/:customerId/bottles-summary', orderController.getCustomerBottlesSummary);
 //Get bottles summary for all customers
-router.get('/bottles-summary/allcustomer', orderController.getBottlesSummary);
+router.get('/bottles-summary/allcustomerdetails', orderController.getBottlesSummary);
 
 module.exports = router;
