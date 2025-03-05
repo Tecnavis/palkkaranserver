@@ -783,107 +783,48 @@ exports.getCustomerInvoices = async (req, res) => {
 // Monthly Plan: { "orderId": "ORDER_ID", "newPlanType": "monthly" }
 
 
-exports.updateBottlesCount = async (req, res) => {
+
+// Controller file: bottlesController.js
+
+exports.updateReturnedBottles = async (req, res) => {
     try {
         const { orderId } = req.params;
+        const { returnedBottles } = req.body;
+        
+        // Validate input
+        if (returnedBottles === undefined || isNaN(returnedBottles) || returnedBottles < 0) {
+            return res.status(400).json({ message: "Valid returnedBottles value is required" });
+        }
         
         // Find the order by ID
-        const order = await OrderProduct.findById(orderId)
-            .populate({
-                path: "productItems.product",
-                select: "category"
-            });
-            
+        const order = await OrderProduct.findById(orderId);
+        
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
         
-        // Calculate total bottles delivered
-        let totalBottles = 0;
+        // Update returned bottles count
+        order.returnedBottles = returnedBottles;
         
-        // Check delivered dates for bottle products
-        if (order.selectedPlanDetails && order.selectedPlanDetails.dates) {
-            const deliveredDates = order.selectedPlanDetails.dates.filter(
-                date => date.status === "delivered"
-            );
-            
-            // For each delivered date, count bottles
-            deliveredDates.forEach(date => {
-                // Count bottles from order items
-                order.productItems.forEach(item => {
-                    if (item.product && item.product.category === "bottle") {
-                        totalBottles += item.quantity;
-                    }
-                });
-            });
-        }
+        // Calculate pending bottles (total delivered bottles - returned bottles)
+        order.pendingBottles = Math.max(0, order.bottles - order.returnedBottles);
         
-        // Update the order with the new bottles count
-        order.bottles = totalBottles;
         await order.save();
-        
-        res.status(200).json({ 
-            success: true, 
-            bottles: totalBottles,
-            message: "Bottles count updated successfully" 
-        });
-    } catch (error) {
-        console.error("Error updating bottles count:", error);
-        res.status(500).json({ error: "Internal server error" });
-    }
-};
-
-
-exports.recalculateAllBottlesCounts = async (req, res) => {
-    try {
-        // Get all orders
-        const orders = await OrderProduct.find({})
-            .populate({
-                path: "productItems.product",
-                select: "category"
-            });
-        
-        // Process each order to update bottles count
-        const updatedOrdersCount = await Promise.all(orders.map(async (order) => {
-            let bottlesCount = 0;
-            
-            // Get delivered dates
-            const deliveredDates = order.selectedPlanDetails.dates.filter(
-                date => date.status === "delivered"
-            );
-            
-            // For each delivered date, count bottles from bottle products
-            deliveredDates.forEach(() => {
-                order.productItems.forEach(item => {
-                    if (item.product && item.product.category === "bottle") {
-                        bottlesCount += item.quantity;
-                    }
-                });
-            });
-            
-            // Update the bottles count if needed
-            if (order.bottles !== bottlesCount) {
-                order.bottles = bottlesCount;
-                await order.save();
-                return true; // Order was updated
-            }
-            
-            return false; // No update needed
-        }));
-        
-        // Count number of orders updated
-        const totalUpdated = updatedOrdersCount.filter(updated => updated).length;
         
         res.status(200).json({
             success: true,
-            message: `Successfully recalculated bottles count for ${totalUpdated} orders out of ${orders.length} total orders.`
+            bottles: order.bottles,
+            returnedBottles: order.returnedBottles,
+            pendingBottles: order.pendingBottles,
+            message: "Returned bottles updated successfully"
         });
     } catch (error) {
-        console.error("Error recalculating all bottles counts:", error);
+        console.error("Error updating returned bottles:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 };
 
+// Modified getOrdersByCustomerId to include bottles information
 exports.getOrdersByCustomerId = async (req, res) => {
     try {
         const { customerId } = req.params;
@@ -904,7 +845,8 @@ exports.getOrdersByCustomerId = async (req, res) => {
 
         // Update bottles count for each order
         const updatedOrders = await Promise.all(orders.map(async (order) => {
-            let bottlesCount = 0;
+            // Count total delivered bottles
+            let totalBottles = 0;
             
             // Filter for delivered dates
             const deliveredDates = order.selectedPlanDetails.dates.filter(
@@ -915,23 +857,67 @@ exports.getOrdersByCustomerId = async (req, res) => {
             deliveredDates.forEach(() => {
                 order.productItems.forEach(item => {
                     if (item.product && item.product.category === "bottle") {
-                        bottlesCount += item.quantity;
+                        totalBottles += item.quantity;
                     }
                 });
             });
             
             // Update the order's bottles count if it has changed
-            if (order.bottles !== bottlesCount) {
-                order.bottles = bottlesCount;
+            if (order.bottles !== totalBottles) {
+                order.bottles = totalBottles;
+                // Recalculate pending bottles
+                order.pendingBottles = Math.max(0, totalBottles - order.returnedBottles);
                 await order.save();
             }
             
-            return order;
+            return {
+                ...order.toObject(),
+                bottlesInfo: {
+                    totalDeliveredBottles: order.bottles,
+                    returnedBottles: order.returnedBottles,
+                    pendingBottles: order.pendingBottles
+                }
+            };
         }));
 
         res.status(200).json(updatedOrders);
     } catch (error) {
         console.error("Error fetching orders by customer ID:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// Function to get total bottles summary for a customer
+exports.getCustomerBottlesSummary = async (req, res) => {
+    try {
+        const { customerId } = req.params;
+        
+        // Find all orders for this customer
+        const orders = await OrderProduct.find({ customer: customerId });
+        
+        if (!orders.length) {
+            return res.status(404).json({ message: "No orders found for this customer" });
+        }
+        
+        // Calculate totals
+        const summary = orders.reduce((acc, order) => {
+            acc.totalDeliveredBottles += order.bottles || 0;
+            acc.totalReturnedBottles += order.returnedBottles || 0;
+            acc.totalPendingBottles += order.pendingBottles || 0;
+            return acc;
+        }, { 
+            totalDeliveredBottles: 0, 
+            totalReturnedBottles: 0, 
+            totalPendingBottles: 0 
+        });
+        
+        res.status(200).json({
+            success: true,
+            customerId,
+            summary
+        });
+    } catch (error) {
+        console.error("Error fetching customer bottles summary:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 };
