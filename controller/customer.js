@@ -141,7 +141,7 @@ exports.create = asyncHandler(async (req, res) => {
     }
 
     // Add +91 prefix
-    const formattedPhone = '+91' + phone;
+    const formattedPhone = '+91 ' + phone;
 
     if (!password) {
         return res.status(400).json({ message: "Please add all required fields" });
