@@ -131,6 +131,13 @@ exports.create = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Please add all required fields" });
     }
 
+    // Ensure phone starts with +91 and has exactly 10 digits
+    phone = phone.replace(/\D/g, ""); // Remove non-numeric characters
+    if (phone.length !== 10) {
+        return res.status(400).json({ message: "Phone number must be exactly 10 digits" });
+    }
+    phone = `+91 ${phone}`;
+
     // Validate and parse address
     let parsedAddress = [];
     if (address) {
