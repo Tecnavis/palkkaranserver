@@ -59,6 +59,9 @@ const customerSchema = new mongoose.Schema({
             isGet: { type: Boolean, default: false },
         },
     ],
+    customerindex: {
+        type: Number,
+    },
     
 });
 

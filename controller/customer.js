@@ -688,3 +688,22 @@ exports.getUnconfirmedPaidAmounts = async (req, res) => {
     }
 
 }
+
+
+//update customerindex by customerid
+exports.updateCustomerIndex = async (req, res) => {
+    try {
+        const { customerId } = req.params;
+        const { customerindex } = req.body;
+        const customer = await CustomerModel.findOne({ customerId });
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+        customer.customerindex = customerindex;
+        await customer.save();
+        res.status(200).json({ message: "Customer index updated successfully" });
+    } catch (error) {
+        console.error("Error updating customer index:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
