@@ -1074,13 +1074,14 @@ exports.invoice = asyncHandler(async (req, res) => {
             return res.status(404).json({ message: "No product items found for this customer" });
         }
 
-        let totalInvoiceAmount = 0;
-        const monthlyOrders = {};
+        let totalInvoiceAmount = 0; // Store total invoice price
+        // Object to store monthly data
+        const monthlyData = {};
 
         // Process each order
         orders.forEach(order => {
             if (order.selectedPlanDetails) {
-                // Filter only delivered dates
+                // Filter delivered dates
                 order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
             }
 
@@ -1090,52 +1091,92 @@ exports.invoice = asyncHandler(async (req, res) => {
             // Sum up routePrice for all product items in the order
             const totalRoutePrice = order.productItems.reduce((sum, item) => sum + item.routePrice, 0);
 
-            // Calculate total price for this order
+            // Calculate total price for this order (deliveredDatesCount * totalRoutePrice)
             order.totalPrice = deliveredDatesCount * totalRoutePrice;
 
             // Add to total invoice amount
             totalInvoiceAmount += order.totalPrice;
 
-            // Extract month and year from the first delivered date
-            if (order.selectedPlanDetails?.dates.length > 0) {
-                const firstDate = new Date(order.selectedPlanDetails.dates[0].date);
-                const monthYear = `${firstDate.getFullYear()}-${(firstDate.getMonth() + 1).toString().padStart(2, '0')}`; // Format: YYYY-MM
-
-                if (!monthlyOrders[monthYear]) {
-                    monthlyOrders[monthYear] = {
-                        month: monthYear,
-                        orders: [],
-                        totalMonthlyPrice: 0
-                    };
-                }
-
-                // Avoid adding duplicate orders
-                const isDuplicate = monthlyOrders[monthYear].orders.some(existingOrder => existingOrder._id.toString() === order._id.toString());
-
-                if (!isDuplicate) {
-                    monthlyOrders[monthYear].orders.push(order);
-                    monthlyOrders[monthYear].totalMonthlyPrice += order.totalPrice;
-                }
+            // Organize data by month
+            if (order.selectedPlanDetails?.dates && order.selectedPlanDetails.dates.length > 0) {
+                order.selectedPlanDetails.dates.forEach(dateObj => {
+                    const date = new Date(dateObj.date);
+                    const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    
+                    if (!monthlyData[monthYear]) {
+                        monthlyData[monthYear] = {
+                            orders: [],
+                            totalAmount: 0,
+                            deliveredDates: 0
+                        };
+                    }
+                    
+                    // Check if this order is already in the monthly data
+                    const existingOrderIndex = monthlyData[monthYear].orders.findIndex(o => o._id.toString() === order._id.toString());
+                    
+                    if (existingOrderIndex === -1) {
+                        // Clone the order to avoid reference issues
+                        const orderClone = JSON.parse(JSON.stringify(order));
+                        // Include only dates from this month
+                        orderClone.selectedPlanDetails.dates = [dateObj];
+                        // Calculate price for just this date
+                        orderClone.totalPrice = totalRoutePrice;
+                        
+                        monthlyData[monthYear].orders.push(orderClone);
+                    } else {
+                        // Add date to existing order
+                        monthlyData[monthYear].orders[existingOrderIndex].selectedPlanDetails.dates.push(dateObj);
+                        // Update price
+                        monthlyData[monthYear].orders[existingOrderIndex].totalPrice += totalRoutePrice;
+                    }
+                    
+                    // Update monthly totals
+                    monthlyData[monthYear].totalAmount += totalRoutePrice;
+                    monthlyData[monthYear].deliveredDates += 1;
+                });
             }
         });
 
         // Extract paidAmounts from the customer field
         const customer = orders[0]?.customer;
         let totalPaid = 0;
+        let monthlyPayments = {};
+        
         if (customer?.paidAmounts?.length) {
+            // Calculate total paid
             totalPaid = customer.paidAmounts.reduce((sum, payment) => sum + payment.amount, 0);
+            
+            // Organize payments by month
+            customer.paidAmounts.forEach(payment => {
+                const date = new Date(payment.date);
+                const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                
+                if (!monthlyPayments[monthYear]) {
+                    monthlyPayments[monthYear] = 0;
+                }
+                
+                monthlyPayments[monthYear] += payment.amount;
+            });
         }
-
-        res.status(200).json({ 
-            monthlyOrders: Object.values(monthlyOrders), 
-            totalInvoiceAmount, 
-            totalPaid 
+        
+        // Add payment data to monthly data
+        Object.keys(monthlyData).forEach(month => {
+            monthlyData[month].paid = monthlyPayments[month] || 0;
+            monthlyData[month].balance = monthlyData[month].totalAmount - (monthlyPayments[month] || 0);
         });
 
+        res.status(200).json({ 
+            orders, 
+            totalInvoiceAmount, 
+            totalPaid,
+            monthlyData: Object.keys(monthlyData).map(month => ({
+                month,
+                ...monthlyData[month]
+            }))
+        });
     } catch (error) {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
 });
-
 
 
