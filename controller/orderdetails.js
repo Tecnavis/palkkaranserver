@@ -1339,8 +1339,10 @@ const formatInvoiceTable = (monthlyData) => {
 
     monthlyData.forEach(({ month, orders, totalAmount, paid, balance }) => {
         orders.forEach(order => {
-            const deliveredDates = order.selectedPlanDetails?.dates.map(d => d.date).join(", ");
-            const products = order.productItems.map(item => `${item.product.name} (${item.quantity} x ${item.routePrice})`).join("<br>");
+            const deliveredDates = order.selectedPlanDetails?.dates
+            .map(d => new Date(d.date).toLocaleDateString("en-GB")) // "en-GB" formats as DD/MM/YYYY
+            .join(", ");
+                    const products = order.productItems.map(item => `${item.product.category} (${item.quantity} x ${item.routePrice})`).join("<br>");
             
             tableHTML += `
                 <tr>
