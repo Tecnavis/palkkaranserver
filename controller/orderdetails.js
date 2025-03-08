@@ -1024,6 +1024,13 @@ exports.invoice = asyncHandler(async (req, res) => {
             return res.status(404).json({ message: "No product items found for this customer" });
         }
 
+        // Filter out "pending" dates
+        orders.forEach(order => {
+            if (order.selectedPlanDetails) {
+                order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
+            }
+        });
+
         // Extract paidAmounts from the customer field (assuming it's the same across all orders)
         const customer = orders[0]?.customer;
         let totalPaid = 0;
