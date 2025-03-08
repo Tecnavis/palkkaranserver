@@ -1329,22 +1329,38 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
             "selectedPlanDetails.dates.date": { $gte: start, $lt: end }
         })
         .populate("productItems.product", "name category routerPrice")
-        .populate("customer", "name email");
+        .populate("customer", "name email paidAmounts");
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No orders found for last month" });
         }
 
         let totalInvoiceAmount = 0;
-        const invoiceDetails = orders.map(order => {
-            const totalPrice = order.productItems.reduce((sum, item) => sum + item.product.routerPrice, 0);
-            totalInvoiceAmount += totalPrice;
-            return `
-                <p>Product: ${order.productItems.map(item => item.product.name).join(", ")}</p>
-                <p>Category: ${order.productItems.map(item => item.product.category).join(", ")}</p>
-                <p>Amount: $${totalPrice}</p>
-                <hr/>
-            `;
+        let totalPaid = 0;
+        let invoiceDetails = [];
+        
+        orders.forEach(order => {
+            if (order.selectedPlanDetails) {
+                // Filter only delivered dates
+                order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
+            }
+
+            // Get count of delivered dates
+            const deliveredDatesCount = order.selectedPlanDetails?.dates?.length || 0;
+
+            // Calculate total price (routerPrice * delivered dates count)
+            const orderTotal = order.productItems.reduce((sum, item) => sum + (item.product.routerPrice * deliveredDatesCount), 0);
+            totalInvoiceAmount += orderTotal;
+
+            invoiceDetails.push(`
+                <tr>
+                    <td>${order.productItems.map(item => item.product.name).join(", ")}</td>
+                    <td>${order.productItems.map(item => item.product.category).join(", ")}</td>
+                    <td>${deliveredDatesCount}</td>
+                    <td>$${order.productItems.map(item => item.product.routerPrice).join(", ")}</td>
+                    <td>$${orderTotal}</td>
+                </tr>
+            `);
         });
 
         const customer = orders[0]?.customer;
@@ -1352,39 +1368,39 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
             return res.status(404).json({ message: "Customer not found" });
         }
 
+        // Calculate total paid
+        if (customer.paidAmounts && customer.paidAmounts.length) {
+            customer.paidAmounts.forEach(payment => {
+                const paymentDate = new Date(payment.date);
+                if (paymentDate >= start && paymentDate < end) {
+                    totalPaid += payment.amount;
+                }
+            });
+        }
+
+        const balanceDue = totalInvoiceAmount - totalPaid;
+
         // Email content
-    const emailHtml = `
-    <h2>Monthly Invoice for ${customer.name}</h2>
-    <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-        <thead>
-            <tr>
-                <th>Product</th>
-                <th>Category</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${orders.map(order => 
-                order.productItems.map(item => `
+        const emailHtml = `
+            <h2>Monthly Invoice for ${customer.name}</h2>
+            <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+                <thead>
                     <tr>
-                        <td>${item.product.name}</td>
-                        <td>${item.product.category}</td>
-                        <td>${item.quantity}</td>
-                        <td>$${item.product.routerPrice}</td>
-                        <td>$${item.quantity * item.product.routerPrice}</td>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Delivered Dates</th>
+                        <th>Price</th>
+                        <th>Subtotal</th>
                     </tr>
-                `).join("")
-            ).join("")}
-        </tbody>
-    </table>
-    <h3>Total Invoice Amount: $${totalInvoiceAmount}</h3>
-    <h3>Total Paid: $${customer.totalPaid}</h3>
-    <h3>Balance Due: $${totalInvoiceAmount - customer.totalPaid}</h3>
-`;
-
-
+                </thead>
+                <tbody>
+                    ${invoiceDetails.join("")}
+                </tbody>
+            </table>
+            <h3>Total Invoice Amount: $${totalInvoiceAmount}</h3>
+            <h3>Total Paid: $${totalPaid}</h3>
+            <h3>Balance Due: $${balanceDue}</h3>
+        `;
 
         // Nodemailer Transporter
         const transporter = nodemailer.createTransport({
