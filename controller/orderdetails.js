@@ -1064,95 +1064,63 @@ exports.invoice = asyncHandler(async (req, res) => {
 
     try {
         const orders = await OrderProduct.find({ customer: customerId })
-            // .populate("productItems.product", "name category routerPrice coverimage quantity")
-// .populate("customer", "name email phone customerId paidAmounts")
-            // .populate("selectedPlanDetails", "planType isActive dates status")
-            // .populate("plan", "planType")
-            // .select("productItems quantity address totalPrice paymentMethod selectedPlanDetails plan");
-
             .populate("productItems.product", "name category routerPrice coverimage quantity")
-                        .populate("customer", "name email phone customerId paidAmounts")
-                        .populate("selectedPlanDetails", "planType isActive dates status")
-                        .populate("plan", "planType")
-                        .select("productItems quantity address");
+            .populate("customer", "name email phone customerId paidAmounts")
+            .populate("selectedPlanDetails", "planType isActive dates status")
+            .populate("plan", "planType")
+            .select("productItems quantity address");
+
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
         }
 
-        let totalInvoiceAmount = 0;
-        let monthlyData = {};
+        let totalPaid = 0;
+        let ordersByMonth = {};
 
-        // Process each order
         orders.forEach(order => {
             if (order.selectedPlanDetails) {
                 order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
             }
 
-            const deliveredDates = order.selectedPlanDetails?.dates || [];
-            const totalRoutePrice = order.productItems.reduce((sum, item) => sum + (item.product?.routerPrice || 0), 0);
+            const deliveredDatesCount = order.selectedPlanDetails?.dates?.length || 0;
+            const totalRoutePrice = order.productItems.reduce((sum, item) => sum + item.routePrice, 0);
+            order.totalPrice = deliveredDatesCount * totalRoutePrice;
 
-            deliveredDates.forEach(({ date }) => {
-                const monthYear = new Date(date).toISOString().substring(0, 7); // "YYYY-MM"
+            // Extract month and year
+            order.selectedPlanDetails.dates.forEach(({ date }) => {
+                const orderDate = new Date(date);
+                const monthYear = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, "0")}`; // Format: YYYY-MM
 
-                if (!monthlyData[monthYear]) {
-                    monthlyData[monthYear] = {
+                if (!ordersByMonth[monthYear]) {
+                    ordersByMonth[monthYear] = {
                         orders: [],
-                        totalMonthInvoice: 0,
-                        totalMonthPaid: 0
+                        totalInvoiceAmount: 0,
+                        totalPaid: 0,
                     };
                 }
 
-                const orderPrice = totalRoutePrice;
-                const cleanedOrder = {
-                    totalPrice: orderPrice,
-                    selectedPlanDetails: order.selectedPlanDetails,
-                    productItems: order.productItems.map(item => ({
-                        name: item.product?.name,
-                        category: item.product?.category,
-                        routerPrice: item.product?.routerPrice,
-                        coverimage: item.product?.coverimage,
-                        quantity: item.product?.quantity
-                    })),
-                    address: order.address,
-                    plan: order.plan,
-                    customer: {
-                        name: order.customer?.name,
-                        email: order.customer?.email,
-                        phone: order.customer?.phone,
-                        customerId: order.customer?.customerId
-                    }
-                };
-
-                monthlyData[monthYear].orders.push(cleanedOrder);
-                monthlyData[monthYear].totalMonthInvoice += orderPrice;
-                totalInvoiceAmount += orderPrice;
+                ordersByMonth[monthYear].orders.push(order);
+                ordersByMonth[monthYear].totalInvoiceAmount += order.totalPrice;
             });
         });
 
-        // Process payments
+        // Extract totalPaid from customer
         const customer = orders[0]?.customer;
-        let totalPaid = 0;
-
         if (customer?.paidAmounts?.length) {
             customer.paidAmounts.forEach(payment => {
-                const monthYear = new Date(payment.date).toISOString().substring(0, 7); // "YYYY-MM"
+                const paymentDate = new Date(payment.date);
+                const monthYear = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, "0")}`;
 
-                if (!monthlyData[monthYear]) {
-                    monthlyData[monthYear] = {
-                        orders: [],
-                        totalMonthInvoice: 0,
-                        totalMonthPaid: 0
-                    };
+                if (ordersByMonth[monthYear]) {
+                    ordersByMonth[monthYear].totalPaid += payment.amount;
                 }
-
-                monthlyData[monthYear].totalMonthPaid += payment.amount;
-                totalPaid += payment.amount;
             });
         }
 
-        res.status(200).json({ monthlyData, totalInvoiceAmount, totalPaid });
+        res.status(200).json(ordersByMonth);
     } catch (error) {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
 });
+
 
