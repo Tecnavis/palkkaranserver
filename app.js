@@ -5,6 +5,8 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var connectDB = require('./config/db');
 var cors = require('cors');
+require("./middleware/cronjob"); // Load cron job
+
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');

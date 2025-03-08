@@ -1060,6 +1060,8 @@ exports.invoice = asyncHandler(async (req, res) => {
 });
 
 
+
+
 //monthly invoice
 exports.monthlyinvoice = asyncHandler(async (req, res) => {
     const { customerId } = req.params;
@@ -1182,3 +1184,200 @@ exports.monthlyinvoice = asyncHandler(async (req, res) => {
 });
 
 
+
+
+
+// exports.monthlyinvoice = asyncHandler(async (req, res) => {
+//     const { customerId } = req.params;
+
+//     try {
+//         const orders = await OrderProduct.find({ customer: customerId })
+//             .populate("productItems.product", "name category routerPrice coverimage quantity")
+//             .populate("customer", "name email phone customerId paidAmounts")
+//             .populate("selectedPlanDetails", "planType isActive dates status")
+//             .populate("plan", "planType")
+//             .select("productItems quantity address");
+
+//         if (!orders || orders.length === 0) {
+//             return res.status(404).json({ message: "No product items found for this customer" });
+//         }
+
+//         let totalInvoiceAmount = 0; // Store total invoice price
+//         // Object to store monthly data
+//         const monthlyData = {};
+
+//         // Process each order
+//         orders.forEach(order => {
+//             if (order.selectedPlanDetails) {
+//                 // Filter delivered dates
+//                 order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
+//             }
+
+//             // Count delivered dates
+//             const deliveredDatesCount = order.selectedPlanDetails?.dates?.length || 0;
+
+//             // Sum up routePrice for all product items in the order
+//             const totalRoutePrice = order.productItems.reduce((sum, item) => sum + item.routePrice, 0);
+
+//             // Calculate total price for this order (deliveredDatesCount * totalRoutePrice)
+//             order.totalPrice = deliveredDatesCount * totalRoutePrice;
+
+//             // Add to total invoice amount
+//             totalInvoiceAmount += order.totalPrice;
+
+//             // Organize data by month
+//             if (order.selectedPlanDetails?.dates && order.selectedPlanDetails.dates.length > 0) {
+//                 order.selectedPlanDetails.dates.forEach(dateObj => {
+//                     const date = new Date(dateObj.date);
+//                     const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    
+//                     if (!monthlyData[monthYear]) {
+//                         monthlyData[monthYear] = {
+//                             orders: [],
+//                             totalAmount: 0,
+//                             deliveredDates: 0
+//                         };
+//                     }
+                    
+//                     // Check if this order is already in the monthly data
+//                     const existingOrderIndex = monthlyData[monthYear].orders.findIndex(o => o._id.toString() === order._id.toString());
+                    
+//                     if (existingOrderIndex === -1) {
+//                         // Clone the order to avoid reference issues
+//                         const orderClone = JSON.parse(JSON.stringify(order));
+//                         // Include only dates from this month
+//                         orderClone.selectedPlanDetails.dates = [dateObj];
+//                         // Calculate price for just this date
+//                         orderClone.totalPrice = totalRoutePrice;
+                        
+//                         monthlyData[monthYear].orders.push(orderClone);
+//                     } else {
+//                         // Add date to existing order
+//                         monthlyData[monthYear].orders[existingOrderIndex].selectedPlanDetails.dates.push(dateObj);
+//                         // Update price
+//                         monthlyData[monthYear].orders[existingOrderIndex].totalPrice += totalRoutePrice;
+//                     }
+                    
+//                     // Update monthly totals
+//                     monthlyData[monthYear].totalAmount += totalRoutePrice;
+//                     monthlyData[monthYear].deliveredDates += 1;
+//                 });
+//             }
+//         });
+
+//         // Extract paidAmounts from the customer field
+//         const customer = orders[0]?.customer;
+//         let totalPaid = 0;
+//         let monthlyPayments = {};
+        
+//         if (customer?.paidAmounts?.length) {
+//             // Calculate total paid
+//             totalPaid = customer.paidAmounts.reduce((sum, payment) => sum + payment.amount, 0);
+            
+//             // Organize payments by month
+//             customer.paidAmounts.forEach(payment => {
+//                 const date = new Date(payment.date);
+//                 const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                
+//                 if (!monthlyPayments[monthYear]) {
+//                     monthlyPayments[monthYear] = 0;
+//                 }
+                
+//                 monthlyPayments[monthYear] += payment.amount;
+//             });
+//         }
+        
+//         // Add payment data to monthly data
+//         Object.keys(monthlyData).forEach(month => {
+//             monthlyData[month].paid = monthlyPayments[month] || 0;
+//             monthlyData[month].balance = monthlyData[month].totalAmount - (monthlyPayments[month] || 0);
+//         });
+
+//         res.status(200).json({ 
+//             // orders, 
+//             totalInvoiceAmount, 
+//             totalPaid,
+//             monthlyData: Object.keys(monthlyData).map(month => ({
+//                 month,
+//                 ...monthlyData[month]
+//             }))
+//         });
+//     } catch (error) {
+//         res.status(500).json({ message: "Error fetching product items", error: error.message });
+//     }
+// });
+
+
+
+
+
+// Helper function to get the first date of the last month
+const getLastMonthRange = () => {
+    const today = new Date();
+    const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return { start: firstDayLastMonth, end: firstDayThisMonth };
+};
+
+exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
+    const { customerId } = req.params;
+    const { start, end } = getLastMonthRange();
+
+    try {
+        const orders = await OrderProduct.find({ 
+            customer: customerId, 
+            "selectedPlanDetails.dates.date": { $gte: start, $lt: end }
+        })
+        .populate("productItems.product", "name category routerPrice")
+        .populate("customer", "name email");
+
+        if (!orders || orders.length === 0) {
+            return res.status(404).json({ message: "No orders found for last month" });
+        }
+
+        let totalInvoiceAmount = 0;
+        const invoiceDetails = orders.map(order => {
+            const totalPrice = order.productItems.reduce((sum, item) => sum + item.routerPrice, 0);
+            totalInvoiceAmount += totalPrice;
+            return `
+                <p>Product: ${order.productItems.map(item => item.product.name).join(", ")}</p>
+                <p>Category: ${order.productItems.map(item => item.product.category).join(", ")}</p>
+                <p>Amount: $${totalPrice}</p>
+                <hr/>
+            `;
+        });
+
+        const customer = orders[0]?.customer;
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        // Email content
+        const emailHtml = `
+            <h2>Monthly Invoice for ${customer.name}</h2>
+            ${invoiceDetails.join("")}
+            <h3>Total: $${totalInvoiceAmount}</h3>
+        `;
+
+        // Nodemailer Transporter
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: process.env.EMAIL,
+                pass: process.env.PASSWORD,
+            },
+        });
+
+        // Send Email
+        await transporter.sendMail({
+            from: `"Your Company" <${process.env.EMAIL}>`,
+            to: customer.email,
+            subject: `Monthly Invoice - ${start.toLocaleDateString()}`,
+            html: emailHtml,
+        });
+
+        res.status(200).json({ message: "Invoice sent successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Error sending invoice", error: error.message });
+    }
+});
