@@ -324,7 +324,7 @@ exports.getSelectedPlanByCustomer = asyncHandler(async (req, res) => {
             select: "-__v -dates", // Exclude `__v` field
         }).populate({
             path: "productItems.product", // Populate product details for each product item
-            select: "price description category routerPrice coverimage productId images", // Select specific fields from the Product model
+            select: "price title quantity description category routerPrice coverimage productId images", // Select specific fields from the Product model
         });
 
         if (!orders || orders.length === 0) {
