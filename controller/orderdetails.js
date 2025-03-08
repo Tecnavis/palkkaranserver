@@ -1016,8 +1016,8 @@ exports.invoice = asyncHandler(async (req, res) => {
         const orders = await OrderProduct.find({ customer: customerId })
             .populate("productItems.product", "name category routerPrice coverimage quantity")
             .populate("customer", "name email phone customerId paidAmounts")
-            .populate("selectedPlanDetails", "planType isActive dates status")
-            .populate("plan", "planType") // Populate product details
+            .populate("selectedPlanDetails", "planType isActive dates status") // Populate plan details
+            .populate("plan", "planType")
             .select("productItems quantity totalPrice address selectedPlanDetails");
 
         if (!orders || orders.length === 0) {
@@ -1032,11 +1032,13 @@ exports.invoice = asyncHandler(async (req, res) => {
             totalPaid = customer.paidAmounts.reduce((sum, payment) => sum + payment.amount, 0);
         }
 
-        // Filter only delivered status from selectedPlanDetails
+        // Ensure selectedPlanDetails is an array and filter only delivered status
         const filteredOrders = orders.map(order => {
             return {
                 ...order.toObject(),
-                selectedPlanDetails: order.selectedPlanDetails?.filter(plan => plan.status === "delivered") || []
+                selectedPlanDetails: Array.isArray(order.selectedPlanDetails)
+                    ? order.selectedPlanDetails.filter(plan => plan.status === "delivered")
+                    : []
             };
         });
 
@@ -1045,4 +1047,3 @@ exports.invoice = asyncHandler(async (req, res) => {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
 });
-
