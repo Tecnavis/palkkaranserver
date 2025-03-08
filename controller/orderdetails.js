@@ -1312,6 +1312,8 @@ exports.monthlyinvoice = asyncHandler(async (req, res) => {
 
 
 // Helper function to get the first date of the last month
+
+// Function to get last month's date range
 const getLastMonthRange = () => {
     const today = new Date();
     const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -1319,6 +1321,64 @@ const getLastMonthRange = () => {
     return { start: firstDayLastMonth, end: firstDayThisMonth };
 };
 
+// Function to format orders into an HTML table
+const formatInvoiceTable = (monthlyData) => {
+    let tableHTML = `
+        <h2>Monthly Invoice Report</h2>
+        <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+            <tr>
+                <th>Customer Name</th>
+                <th>Plan Type</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Delivered Dates</th>
+                <th>Total Amount</th>
+                <th>Paid</th>
+                <th>Balance</th>
+            </tr>`;
+
+    monthlyData.forEach(({ month, orders, totalAmount, paid, balance }) => {
+        orders.forEach(order => {
+            const deliveredDates = order.selectedPlanDetails?.dates.map(d => d.date).join(", ");
+            const products = order.productItems.map(item => `${item.product.name} (${item.quantity} x ${item.routePrice})`).join("<br>");
+            
+            tableHTML += `
+                <tr>
+                    <td>${order.customer?.name || "N/A"}</td>
+                    <td>${order.selectedPlanDetails?.planType || "N/A"}</td>
+                    <td>${products}</td>
+                    <td>${order.productItems.reduce((sum, item) => sum + item.quantity, 0)}</td>
+                    <td>${deliveredDates || "N/A"}</td>
+                    <td>${totalAmount}</td>
+                    <td>${paid}</td>
+                    <td>${balance}</td>
+                </tr>`;
+        });
+    });
+
+    tableHTML += `</table>`;
+    return tableHTML;
+};
+
+// Function to send email with invoice
+const sendEmail = async (to, subject, htmlContent) => {
+    const transporter = nodemailer.createTransport({
+        service: "Gmail",
+        auth: {
+            user: "your-email@gmail.com",
+            pass: "your-email-password",
+        },
+    });
+
+    await transporter.sendMail({
+        from: '"Company Name" <your-email@gmail.com>',
+        to,
+        subject,
+        html: htmlContent,
+    });
+};
+
+// Controller to fetch last month's invoice and send email
 exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
     const { customerId } = req.params;
     const { start, end } = getLastMonthRange();
@@ -1341,20 +1401,17 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
         const customer = orders[0]?.customer;
 
         orders.forEach(order => {
-            // Filter only "delivered" dates within last month
             const deliveredDates = order.selectedPlanDetails?.dates?.filter(date => {
                 const deliveredDate = new Date(date.date);
                 return date.status === "delivered" && deliveredDate >= start && deliveredDate < end;
             }) || [];
 
-            if (deliveredDates.length === 0) return; // Skip if no deliveries last month
+            if (deliveredDates.length === 0) return;
 
-            // Calculate total price for this order
             const totalRoutePrice = order.productItems.reduce((sum, item) => sum + item.routePrice, 0);
             const orderTotalPrice = deliveredDates.length * totalRoutePrice;
             totalInvoiceAmount += orderTotalPrice;
 
-            // Get month-year key
             const monthYear = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
 
             if (!monthlyData[monthYear]) {
@@ -1367,15 +1424,10 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
                 };
             }
 
-            // Push order details into the monthly data
             monthlyData[monthYear].orders.push({
                 _id: order._id,
-                customer: customer,
-                selectedPlanDetails: {
-                    planType: order.selectedPlanDetails?.planType,
-                    dates: deliveredDates,
-                    isActive: order.selectedPlanDetails?.isActive
-                },
+                customer,
+                selectedPlanDetails: order.selectedPlanDetails,
                 address: order.address,
                 productItems: order.productItems.map(item => ({
                     product: item.product,
@@ -1386,12 +1438,10 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
                 totalPrice: orderTotalPrice
             });
 
-            // Update monthly totals
             monthlyData[monthYear].totalAmount += orderTotalPrice;
             monthlyData[monthYear].deliveredDates += deliveredDates.length;
         });
 
-        // Get payments for last month
         if (customer?.paidAmounts?.length) {
             customer.paidAmounts.forEach(payment => {
                 const paymentDate = new Date(payment.date);
@@ -1400,25 +1450,22 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
                 if (paymentDate >= start && paymentDate < end) {
                     totalPaid += payment.amount;
                     if (!monthlyData[monthYear]) {
-                        monthlyData[monthYear] = {
-                            orders: [],
-                            totalAmount: 0,
-                            deliveredDates: 0,
-                            paid: 0,
-                            balance: 0
-                        };
+                        monthlyData[monthYear] = { orders: [], totalAmount: 0, deliveredDates: 0, paid: 0, balance: 0 };
                     }
                     monthlyData[monthYear].paid += payment.amount;
                 }
             });
         }
 
-        // Calculate balances
         Object.keys(monthlyData).forEach(month => {
             monthlyData[month].balance = monthlyData[month].totalAmount - monthlyData[month].paid;
         });
 
+        const htmlTable = formatInvoiceTable(Object.values(monthlyData));
+        await sendEmail(customer.email, "Your Monthly Invoice Report", htmlTable);
+
         res.status(200).json({
+            message: "Invoice sent successfully",
             totalInvoiceAmount,
             totalPaid,
             monthlyData: Object.keys(monthlyData).map(month => ({
@@ -1428,7 +1475,8 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ message: "Error fetching invoice details", error: error.message });
+        res.status(500).json({ message: "Error sending invoice", error: error.message });
     }
 });
+
 
