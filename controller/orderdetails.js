@@ -1380,8 +1380,6 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
             </tbody>
         </table>
         <h3>Total Invoice Amount: $${totalInvoiceAmount}</h3>
-        <h3>Total Paid: $${totalPaid}</h3>
-        <h3>Balance Due: $${totalInvoiceAmount - totalPaid}</h3>
     `;
     
     
