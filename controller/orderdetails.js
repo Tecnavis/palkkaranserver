@@ -1009,6 +1009,56 @@ exports.getBottlesSummary = async (req, res) => {
 
 
 //invoice
+// exports.invoice = asyncHandler(async (req, res) => {
+//     const { customerId } = req.params;
+
+//     try {
+//         const orders = await OrderProduct.find({ customer: customerId })
+//             .populate("productItems.product", "name category routerPrice coverimage quantity")
+//             .populate("customer", "name email phone customerId paidAmounts")
+//             .populate("selectedPlanDetails", "planType isActive dates status")
+//             .populate("plan", "planType")
+//             .select("productItems quantity address");
+
+//         if (!orders || orders.length === 0) {
+//             return res.status(404).json({ message: "No product items found for this customer" });
+//         }
+
+//         let totalInvoiceAmount = 0; // Store total invoice price
+
+//         // Process each order
+//         orders.forEach(order => {
+//             if (order.selectedPlanDetails) {
+//                 // Filter delivered dates
+//                 order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
+//             }
+
+//             // Count delivered dates
+//             const deliveredDatesCount = order.selectedPlanDetails?.dates?.length || 0;
+
+//             // Sum up routePrice for all product items in the order
+//             const totalRoutePrice = order.productItems.reduce((sum, item) => sum + item.routePrice, 0);
+
+//             // Calculate total price for this order (deliveredDatesCount * totalRoutePrice)
+//             order.totalPrice = deliveredDatesCount * totalRoutePrice;
+
+//             // Add to total invoice amount
+//             totalInvoiceAmount += order.totalPrice;
+//         });
+
+//         // Extract paidAmounts from the customer field (assuming it's the same across all orders)
+//         const customer = orders[0]?.customer;
+//         let totalPaid = 0;
+//         if (customer?.paidAmounts?.length) {
+//             totalPaid = customer.paidAmounts.reduce((sum, payment) => sum + payment.amount, 0);
+//         }
+
+//         res.status(200).json({ orders, totalInvoiceAmount, totalPaid });
+//     } catch (error) {
+//         res.status(500).json({ message: "Error fetching product items", error: error.message });
+//     }
+// });
+
 exports.invoice = asyncHandler(async (req, res) => {
     const { customerId } = req.params;
 
@@ -1024,38 +1074,59 @@ exports.invoice = asyncHandler(async (req, res) => {
             return res.status(404).json({ message: "No product items found for this customer" });
         }
 
-        let totalInvoiceAmount = 0; // Store total invoice price
+        let totalInvoiceAmount = 0;
+        let monthlyData = {};
 
         // Process each order
         orders.forEach(order => {
             if (order.selectedPlanDetails) {
-                // Filter delivered dates
                 order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
             }
 
-            // Count delivered dates
-            const deliveredDatesCount = order.selectedPlanDetails?.dates?.length || 0;
-
-            // Sum up routePrice for all product items in the order
+            const deliveredDates = order.selectedPlanDetails?.dates || [];
             const totalRoutePrice = order.productItems.reduce((sum, item) => sum + item.routePrice, 0);
 
-            // Calculate total price for this order (deliveredDatesCount * totalRoutePrice)
-            order.totalPrice = deliveredDatesCount * totalRoutePrice;
+            deliveredDates.forEach(({ date }) => {
+                const monthYear = new Date(date).toISOString().substring(0, 7); // "YYYY-MM"
 
-            // Add to total invoice amount
-            totalInvoiceAmount += order.totalPrice;
+                if (!monthlyData[monthYear]) {
+                    monthlyData[monthYear] = {
+                        orders: [],
+                        totalMonthInvoice: 0,
+                        totalMonthPaid: 0
+                    };
+                }
+
+                const orderPrice = totalRoutePrice;
+                monthlyData[monthYear].orders.push({ ...order, totalPrice: orderPrice });
+                monthlyData[monthYear].totalMonthInvoice += orderPrice;
+                totalInvoiceAmount += orderPrice;
+            });
         });
 
-        // Extract paidAmounts from the customer field (assuming it's the same across all orders)
+        // Process payments
         const customer = orders[0]?.customer;
         let totalPaid = 0;
+
         if (customer?.paidAmounts?.length) {
-            totalPaid = customer.paidAmounts.reduce((sum, payment) => sum + payment.amount, 0);
+            customer.paidAmounts.forEach(payment => {
+                const monthYear = new Date(payment.date).toISOString().substring(0, 7); // "YYYY-MM"
+
+                if (!monthlyData[monthYear]) {
+                    monthlyData[monthYear] = {
+                        orders: [],
+                        totalMonthInvoice: 0,
+                        totalMonthPaid: 0
+                    };
+                }
+
+                monthlyData[monthYear].totalMonthPaid += payment.amount;
+                totalPaid += payment.amount;
+            });
         }
 
-        res.status(200).json({ orders, totalInvoiceAmount, totalPaid });
+        res.status(200).json({ monthlyData, totalInvoiceAmount, totalPaid });
     } catch (error) {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
 });
-
