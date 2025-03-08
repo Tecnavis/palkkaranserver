@@ -1016,9 +1016,9 @@ exports.invoice = asyncHandler(async (req, res) => {
         const orders = await OrderProduct.find({ customer: customerId })
             .populate("productItems.product", "name category routerPrice coverimage quantity")
             .populate("customer", "name email phone customerId paidAmounts")
-            .populate("selectedPlanDetails", "planType isActive dates status") // Populate plan details
-            .populate("plan", "planType")
-            .select("productItems quantity totalPrice address selectedPlanDetails");
+            .populate("selectedPlanDetails", "planType isActive dates status")
+            .populate("plan", "planType") // Populate product details
+            .select("productItems quantity totalPrice address");
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
@@ -1032,17 +1032,7 @@ exports.invoice = asyncHandler(async (req, res) => {
             totalPaid = customer.paidAmounts.reduce((sum, payment) => sum + payment.amount, 0);
         }
 
-        // Ensure selectedPlanDetails is an array and filter only delivered status
-        const filteredOrders = orders.map(order => {
-            return {
-                ...order.toObject(),
-                selectedPlanDetails: Array.isArray(order.selectedPlanDetails)
-                    ? order.selectedPlanDetails.filter(plan => plan.status === "delivered")
-                    : []
-            };
-        });
-
-        res.status(200).json({ orders: filteredOrders, totalPaid });
+        res.status(200).json({ orders, totalPaid });
     } catch (error) {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
