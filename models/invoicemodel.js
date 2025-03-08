@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const invoiceSchema = new mongoose.Schema({
     invoiceId: {
         type: String,
+        required: true,
         unique: true
     },
     customerId: {
@@ -10,26 +11,44 @@ const invoiceSchema = new mongoose.Schema({
         ref: "Customer",
         required: true
     },
-    orderDetails: [
+    customerDetails: {
+        name: String,
+        email: String,
+        phone: String,
+        address: {
+            postcode: String,
+            streetAddress: String,
+            apartment: String
+        },
+        customerId: String,
+        routeNo: String
+    },
+    invoicePeriod: {
+        month: Number,
+        year: Number,
+        monthName: String
+    },
+    orderItems: [
         {
-            orderId: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "OrderProduct"
+            date: {
+                type: Date
             },
-            productItems: [
+            items: [
                 {
-                    product: {
-                        type: mongoose.Schema.Types.ObjectId,
-                        ref: "Product"
-                    },
+                    productName: String,
                     quantity: Number,
-                    routePrice: Number
+                    unitPrice: Number,
+                    subtotal: Number
                 }
             ],
-            totalAmount: Number
+            dailyTotal: Number
         }
     ],
     totalAmount: {
+        type: Number,
+        default: 0
+    },
+    paidAmount: {
         type: Number,
         default: 0
     },

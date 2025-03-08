@@ -1,12 +1,17 @@
 const express = require("express");
 const router = express.Router();
-const { createInvoice } = require("../controller/invoice");
+const invoiceController = require("../controller/invoice");
 
-router.post("/generate-invoice/:customerId", async (req, res) => {
-    const { customerId } = req.params;
+// Generate monthly invoices
+router.get("/generate", invoiceController.generateMonthlyInvoices);
 
-    const response = await createInvoice(customerId);
-    return res.json(response);
-});
+// Get all invoices
+router.get("/", invoiceController.getAllInvoices);
+
+// Get invoice by ID
+router.get("/:id", invoiceController.getInvoiceById);
+
+// Get invoices by customer ID
+router.get("/customer/:customerId", invoiceController.getInvoicesByCustomer);
 
 module.exports = router;
