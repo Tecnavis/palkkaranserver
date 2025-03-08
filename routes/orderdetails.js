@@ -42,4 +42,5 @@ router.get('/bottles-summary/allcustomer', orderController.getBottlesSummary);
 
 // Get product items by customer ID
 router.get("/invoice/:customerId", orderController.invoice);
+router.get("/monthlyinvoice/:customerId", orderController.monthlyinvoice);
 module.exports = router;
