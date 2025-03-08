@@ -2,7 +2,7 @@ const Invoice = require("../models/invoicemodel");
 const OrderDetails = require("../models/orderdetails");
 const { v4: uuidv4 } = require("uuid");
 
-const createInvoice = async (customerId) => {
+exports.createInvoice = async (customerId) => {
     try {
         // Fetch all orders for the given customer
         const orders = await OrderDetails.find({ "customer._id": customerId }).populate("productItems.product");
