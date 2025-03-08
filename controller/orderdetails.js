@@ -1068,7 +1068,8 @@ exports.invoice = asyncHandler(async (req, res) => {
             .populate("customer", "name email phone customerId paidAmounts")
             .populate("selectedPlanDetails", "planType isActive dates status")
             .populate("plan", "planType")
-            .select("productItems quantity address");
+            .select("productItems quantity address")
+            .lean(); // Convert to plain objects to remove unnecessary metadata
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
@@ -1079,12 +1080,12 @@ exports.invoice = asyncHandler(async (req, res) => {
 
         // Process each order
         orders.forEach(order => {
-            if (order.selectedPlanDetails) {
+            if (order.selectedPlanDetails?.dates) {
                 order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
             }
 
             const deliveredDates = order.selectedPlanDetails?.dates || [];
-            const totalRoutePrice = order.productItems.reduce((sum, item) => sum + item.routePrice, 0);
+            const totalRoutePrice = order.productItems.reduce((sum, item) => sum + (item.product?.routerPrice || 0), 0);
 
             deliveredDates.forEach(({ date }) => {
                 const monthYear = new Date(date).toISOString().substring(0, 7); // "YYYY-MM"
@@ -1098,7 +1099,23 @@ exports.invoice = asyncHandler(async (req, res) => {
                 }
 
                 const orderPrice = totalRoutePrice;
-                monthlyData[monthYear].orders.push({ ...order, totalPrice: orderPrice });
+                monthlyData[monthYear].orders.push({
+                    customer: {
+                        name: order.customer?.name,
+                        email: order.customer?.email,
+                        phone: order.customer?.phone
+                    },
+                    productItems: order.productItems.map(item => ({
+                        name: item.product?.name,
+                        category: item.product?.category,
+                        price: item.product?.routerPrice,
+                        coverimage: item.product?.coverimage,
+                        quantity: item.product?.quantity
+                    })),
+                    address: order.address,
+                    totalPrice: orderPrice
+                });
+
                 monthlyData[monthYear].totalMonthInvoice += orderPrice;
                 totalInvoiceAmount += orderPrice;
             });
