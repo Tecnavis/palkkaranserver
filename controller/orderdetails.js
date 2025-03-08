@@ -1354,10 +1354,37 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
 
         // Email content
         const emailHtml = `
-            <h2>Monthly Invoice for ${customer.name}</h2>
-            ${invoiceDetails.join("")}
-            <h3>Total: $${totalInvoiceAmount}</h3>
-        `;
+        <h2>Monthly Invoice for ${customer.name}</h2>
+        <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${orders.map(order => 
+                    order.productItems.map(item => `
+                        <tr>
+                            <td>${item.product.name}</td>
+                            <td>${item.product.category}</td>
+                            <td>${item.quantity}</td>
+                            <td>$${item.routerPrice}</td>
+                            <td>$${item.quantity * item.routerPrice}</td>
+                        </tr>
+                    `).join("")
+                ).join("")}
+            </tbody>
+        </table>
+        <h3>Total Invoice Amount: $${totalInvoiceAmount}</h3>
+        <h3>Total Paid: $${totalPaid}</h3>
+        <h3>Balance Due: $${totalInvoiceAmount - totalPaid}</h3>
+    `;
+    
+    
 
         // Nodemailer Transporter
         const transporter = nodemailer.createTransport({
