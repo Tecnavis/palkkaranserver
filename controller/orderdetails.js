@@ -1068,8 +1068,7 @@ exports.invoice = asyncHandler(async (req, res) => {
             .populate("customer", "name email phone customerId paidAmounts")
             .populate("selectedPlanDetails", "planType isActive dates status")
             .populate("plan", "planType")
-            .select("productItems quantity address")
-            .lean(); // Converts Mongoose documents into plain JavaScript objects
+            .select("productItems quantity address totalPrice paymentMethod selectedPlanDetails plan");
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
@@ -1078,6 +1077,7 @@ exports.invoice = asyncHandler(async (req, res) => {
         let totalInvoiceAmount = 0;
         let monthlyData = {};
 
+        // Process each order
         orders.forEach(order => {
             if (order.selectedPlanDetails) {
                 order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
@@ -1099,7 +1099,8 @@ exports.invoice = asyncHandler(async (req, res) => {
 
                 const orderPrice = totalRoutePrice;
                 const cleanedOrder = {
-                    _id: order._id,
+                    totalPrice: orderPrice,
+                    selectedPlanDetails: order.selectedPlanDetails,
                     productItems: order.productItems.map(item => ({
                         name: item.product?.name,
                         category: item.product?.category,
@@ -1107,18 +1108,23 @@ exports.invoice = asyncHandler(async (req, res) => {
                         coverimage: item.product?.coverimage,
                         quantity: item.product?.quantity
                     })),
-                    quantity: order.quantity,
                     address: order.address,
-                    selectedPlanDetails: order.selectedPlanDetails,
-                    plan: order.plan
+                    plan: order.plan,
+                    customer: {
+                        name: order.customer?.name,
+                        email: order.customer?.email,
+                        phone: order.customer?.phone,
+                        customerId: order.customer?.customerId
+                    }
                 };
 
-                monthlyData[monthYear].orders.push({ ...cleanedOrder, totalPrice: orderPrice });
+                monthlyData[monthYear].orders.push(cleanedOrder);
                 monthlyData[monthYear].totalMonthInvoice += orderPrice;
                 totalInvoiceAmount += orderPrice;
             });
         });
 
+        // Process payments
         const customer = orders[0]?.customer;
         let totalPaid = 0;
 
@@ -1144,3 +1150,4 @@ exports.invoice = asyncHandler(async (req, res) => {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
 });
+
