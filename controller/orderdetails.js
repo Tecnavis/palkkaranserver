@@ -1337,7 +1337,8 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
 
         let totalInvoiceAmount = 0;
         const invoiceDetails = orders.map(order => {
-            const totalPrice = order.productItems.reduce((sum, item) => sum + item.routerPrice, 0);
+        <h3>Balance Due: $${totalInvoiceAmount - totalPaid}</h3>
+            const totalPrice = order.productItems.reduce((sum, item) => sum + item.product.routerPrice, 0);
             totalInvoiceAmount += totalPrice;
             return `
                 <p>Product: ${order.productItems.map(item => item.product.name).join(", ")}</p>
@@ -1372,14 +1373,16 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
                             <td>${item.product.name}</td>
                             <td>${item.product.category}</td>
                             <td>${item.quantity}</td>
-                            <td>$${item.routerPrice}</td>
-                            <td>$${item.quantity * item.routerPrice}</td>
+                            <td>$${item.product.routerPrice}</td>
+                            <td>$${item.quantity * item.product.routerPrice}</td>
                         </tr>
                     `).join("")
                 ).join("")}
             </tbody>
         </table>
         <h3>Total Invoice Amount: $${totalInvoiceAmount}</h3>
+        <h3>Total Paid: $${customer.totalPaid}</h3>
+        <h3>Balance Due: $${totalInvoiceAmount - customer.totalPaid}</h3>
     `;
     
     
