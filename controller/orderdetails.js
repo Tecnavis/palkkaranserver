@@ -1014,14 +1014,25 @@ exports.invoice = asyncHandler(async (req, res) => {
 
     try {
         const orders = await OrderProduct.find({ customer: customerId })
-            .populate("productItems.product", "name category routerPrice coverimage  quantity").populate("customer", "name email phone customerId paidAmounts").populate("selectedPlanDetails", "planType isActive dates status").populate("plan", "planType")// Populate product details
+            .populate("productItems.product", "name category routerPrice coverimage quantity")
+            .populate("customer", "name email phone customerId paidAmounts")
+            .populate("selectedPlanDetails", "planType isActive dates status")
+            .populate("plan", "planType") // Populate product details
             .select("productItems quantity totalPrice address");
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
         }
 
-        res.status(200).json(orders);
+        // Extract paidAmounts from the customer field (assuming it's the same across all orders)
+        const customer = orders[0]?.customer;
+        let totalPaid = 0;
+
+        if (customer?.paidAmounts?.length) {
+            totalPaid = customer.paidAmounts.reduce((sum, payment) => sum + payment.amount, 0);
+        }
+
+        res.status(200).json({ orders, totalPaid });
     } catch (error) {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
