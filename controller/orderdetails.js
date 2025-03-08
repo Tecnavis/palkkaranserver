@@ -362,8 +362,8 @@ exports.getProductItemsByCustomer = asyncHandler(async (req, res) => {
 
     try {
         const orders = await OrderProduct.find({ customer: customerId })
-            .populate("productItems.product", "name price category routerPrice coverimage images title description quantity").populate("customer", "name email phone customerId paidAmounts").populate("selectedPlanDetails", "planType isActive dates status").populate("plan", "planType leaves ")// Populate product details
-            .select("productItems quantity  totalPrice paymentMethod paymentStatus address Total paidamount");
+            .populate("productItems.product", "name price category routerPrice coverimage images title quantity").populate("customer", "name email phone customerId paidAmounts").populate("selectedPlanDetails", "planType isActive dates status").populate("plan", "planType leaves ")// Populate product details
+            .select("productItems quantity totalPrice address");
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
