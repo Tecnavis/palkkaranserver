@@ -1365,13 +1365,13 @@ const sendEmail = async (to, subject, htmlContent) => {
     const transporter = nodemailer.createTransport({
         service: "Gmail",
         auth: {
-            user: "your-email@gmail.com",
-            pass: "your-email-password",
+            user: process.env.EMAIL,
+            pass: process.env.PASSWORD,
         },
     });
 
     await transporter.sendMail({
-        from: '"Company Name" <your-email@gmail.com>',
+        from: `"Company Name" ${process.env.EMAIL}`,
         to,
         subject,
         html: htmlContent,
