@@ -1069,7 +1069,7 @@ exports.invoice = asyncHandler(async (req, res) => {
             .populate("selectedPlanDetails", "planType isActive dates status")
             .populate("plan", "planType")
             .select("productItems quantity address")
-            .lean(); // Convert to plain objects to remove unnecessary metadata
+            .lean(); // Converts Mongoose documents into plain JavaScript objects
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
@@ -1078,9 +1078,8 @@ exports.invoice = asyncHandler(async (req, res) => {
         let totalInvoiceAmount = 0;
         let monthlyData = {};
 
-        // Process each order
         orders.forEach(order => {
-            if (order.selectedPlanDetails?.dates) {
+            if (order.selectedPlanDetails) {
                 order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
             }
 
@@ -1099,29 +1098,27 @@ exports.invoice = asyncHandler(async (req, res) => {
                 }
 
                 const orderPrice = totalRoutePrice;
-                monthlyData[monthYear].orders.push({
-                    customer: {
-                        name: order.customer?.name,
-                        email: order.customer?.email,
-                        phone: order.customer?.phone
-                    },
+                const cleanedOrder = {
+                    _id: order._id,
                     productItems: order.productItems.map(item => ({
                         name: item.product?.name,
                         category: item.product?.category,
-                        price: item.product?.routerPrice,
+                        routerPrice: item.product?.routerPrice,
                         coverimage: item.product?.coverimage,
                         quantity: item.product?.quantity
                     })),
+                    quantity: order.quantity,
                     address: order.address,
-                    totalPrice: orderPrice
-                });
+                    selectedPlanDetails: order.selectedPlanDetails,
+                    plan: order.plan
+                };
 
+                monthlyData[monthYear].orders.push({ ...cleanedOrder, totalPrice: orderPrice });
                 monthlyData[monthYear].totalMonthInvoice += orderPrice;
                 totalInvoiceAmount += orderPrice;
             });
         });
 
-        // Process payments
         const customer = orders[0]?.customer;
         let totalPaid = 0;
 
