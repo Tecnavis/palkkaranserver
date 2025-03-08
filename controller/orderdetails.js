@@ -259,29 +259,31 @@ exports.getMostOrderedProducts = async (req, res) => {
   };
   
 
-exports.getOrdersByCustomerId = async (req, res) => {
-    try {
-        const { customerId } = req.params; // Get customer ID from request parameters
+  //last commented
+  
+// exports.getOrdersByCustomerId = async (req, res) => {
+//     try {
+//         const { customerId } = req.params; // Get customer ID from request parameters
 
-        // Find orders for the given customer ID
-        const orders = await OrderProduct.find({ customer: customerId })
-            .populate("customer", "name email phoneNumber") // Populate customer details
-            .populate({
-                path: "productItems.product", // Populate product details for each product item
-                select: "name price description category", // Select specific fields from the Product model
-            })
-            .populate("plan", "planType").populate("selectedPlanDetails", "planType isActive dates status"); // Optionally populate plan details
+//         // Find orders for the given customer ID
+//         const orders = await OrderProduct.find({ customer: customerId })
+//             .populate("customer", "name email phoneNumber") // Populate customer details
+//             .populate({
+//                 path: "productItems.product", // Populate product details for each product item
+//                 select: "name price description category coverimage title", // Select specific fields from the Product model
+//             })
+//             .populate("plan", "planType").populate("selectedPlanDetails", "planType isActive dates status"); // Optionally populate plan details
 
-        if (!orders.length) {
-            return res.status(404).json({ message: "No orders found for this customer" });
-        }
+//         if (!orders.length) {
+//             return res.status(404).json({ message: "No orders found for this customer" });
+//         }
 
-        res.status(200).json(orders);
-    } catch (error) {
-        console.error("Error fetching orders by customer ID:", error);
-        res.status(500).json({ error: "Internal server error" });
-    }
-};
+//         res.status(200).json(orders);
+//     } catch (error) {
+//         console.error("Error fetching orders by customer ID:", error);
+//         res.status(500).json({ error: "Internal server error" });
+//     }
+// };
 
   //delete order by orderId
   exports.delete = async (req, res) => {
@@ -849,7 +851,7 @@ exports.getOrdersByCustomerId = async (req, res) => {
             .populate("customer", "name email phoneNumber")
             .populate({
                 path: "productItems.product",
-                select: "name price description category",
+                select: "name price description category title",
             })
             .populate("plan", "planType")
             .populate("selectedPlanDetails", "planType isActive dates status");
