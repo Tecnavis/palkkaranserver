@@ -1031,6 +1031,9 @@ exports.invoice = asyncHandler(async (req, res) => {
             }
         });
 
+        // Calculate total order price
+        const totalOrderPrice = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+
         // Extract paidAmounts from the customer field (assuming it's the same across all orders)
         const customer = orders[0]?.customer;
         let totalPaid = 0;
@@ -1039,8 +1042,9 @@ exports.invoice = asyncHandler(async (req, res) => {
             totalPaid = customer.paidAmounts.reduce((sum, payment) => sum + payment.amount, 0);
         }
 
-        res.status(200).json({ orders, totalPaid });
+        res.status(200).json({ orders, totalOrderPrice, totalPaid });
     } catch (error) {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
 });
+
