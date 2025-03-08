@@ -1017,32 +1017,43 @@ exports.invoice = asyncHandler(async (req, res) => {
             .populate("productItems.product", "name category routerPrice coverimage quantity")
             .populate("customer", "name email phone customerId paidAmounts")
             .populate("selectedPlanDetails", "planType isActive dates status")
-            .populate("plan", "planType") // Populate product details
-            .select("productItems quantity totalPrice address");
+            .populate("plan", "planType")
+            .select("productItems quantity address");
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
         }
 
-        // Filter out "pending" dates
+        let totalInvoiceAmount = 0; // Store total invoice price
+
+        // Process each order
         orders.forEach(order => {
             if (order.selectedPlanDetails) {
+                // Filter delivered dates
                 order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
             }
-        });
 
-        // Calculate total order price
-        const totalOrderPrice = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+            // Count delivered dates
+            const deliveredDatesCount = order.selectedPlanDetails?.dates?.length || 0;
+
+            // Sum up routePrice for all product items in the order
+            const totalRoutePrice = order.productItems.reduce((sum, item) => sum + item.routePrice, 0);
+
+            // Calculate total price for this order (deliveredDatesCount * totalRoutePrice)
+            order.totalPrice = deliveredDatesCount * totalRoutePrice;
+
+            // Add to total invoice amount
+            totalInvoiceAmount += order.totalPrice;
+        });
 
         // Extract paidAmounts from the customer field (assuming it's the same across all orders)
         const customer = orders[0]?.customer;
         let totalPaid = 0;
-
         if (customer?.paidAmounts?.length) {
             totalPaid = customer.paidAmounts.reduce((sum, payment) => sum + payment.amount, 0);
         }
 
-        res.status(200).json({ orders, totalOrderPrice, totalPaid });
+        res.status(200).json({ orders, totalInvoiceAmount, totalPaid });
     } catch (error) {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
