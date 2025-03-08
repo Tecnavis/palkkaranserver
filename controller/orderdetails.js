@@ -1006,3 +1006,23 @@ exports.getBottlesSummary = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+
+//invoice
+exports.invoice = asyncHandler(async (req, res) => {
+    const { customerId } = req.params;
+
+    try {
+        const orders = await OrderProduct.find({ customer: customerId })
+            .populate("productItems.product", "name category routerPrice coverimage  quantity").populate("customer", "name email phone customerId paidAmounts").populate("selectedPlanDetails", "planType isActive dates status").populate("plan", "planType")// Populate product details
+            .select("productItems quantity totalPrice address");
+
+        if (!orders || orders.length === 0) {
+            return res.status(404).json({ message: "No product items found for this customer" });
+        }
+
+        res.status(200).json(orders);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching product items", error: error.message });
+    }
+});
