@@ -815,24 +815,20 @@ exports.updateReturnedBottlesByCustomer = async (req, res) => {
         
         // Process orders to allocate returned bottles
         const updatedOrders = await Promise.all(orders.map(async (order) => {
-            // Skip orders with no bottles
             if (!order.bottles || order.bottles <= 0) {
                 return order;
             }
             
-            // Determine how many bottles to allocate to this order
-            const bottlesToAllocate = Math.min(remainingToAllocate, order.bottles);
+            const bottlesToAllocate = Math.min(remainingToAllocate, order.bottles - (order.returnedBottles || 0));
             
-            // Update this order's returned bottles
-            order.returnedBottles = bottlesToAllocate;
+            // ✅ Fix: Accumulate returned bottles instead of overwriting
+            order.returnedBottles = (order.returnedBottles || 0) + bottlesToAllocate;
             
-            // Calculate pending bottles
+            // ✅ Fix: Calculate pending bottles correctly
             order.pendingBottles = Math.max(0, order.bottles - order.returnedBottles);
             
-            // Reduce remaining bottles to allocate
             remainingToAllocate -= bottlesToAllocate;
             
-            // Save the order
             await order.save();
             
             return order;
@@ -845,6 +841,11 @@ exports.updateReturnedBottlesByCustomer = async (req, res) => {
             totalPendingBottles: totalDeliveredBottles - validReturnedBottles
         };
         
+        // ✅ Fix: If no pending bottles, return a specific message
+        if (summary.totalPendingBottles === 0) {
+            return res.status(200).json({ message: "There are no pending bottles for return." });
+        }
+
         res.status(200).json({
             success: true,
             customerId,
@@ -856,6 +857,7 @@ exports.updateReturnedBottlesByCustomer = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
 // Modified getOrdersByCustomerId to include bottles information
 exports.getOrdersByCustomerId = async (req, res) => {
     try {
