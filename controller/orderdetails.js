@@ -1168,7 +1168,7 @@ exports.monthlyinvoice = asyncHandler(async (req, res) => {
         });
 
         res.status(200).json({ 
-            orders, 
+            // orders, 
             totalInvoiceAmount, 
             totalPaid,
             monthlyData: Object.keys(monthlyData).map(month => ({
