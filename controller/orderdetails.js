@@ -572,7 +572,7 @@ exports. getOrdersByRoute = async (req, res) => {
 
         // Find orders where the customer is in the list of found customer IDs
         const orders = await OrderProduct.find({ customer: { $in: customerIds } })
-            .populate("customer", "name email phone routeno image customerId")
+            .populate("customer", "name email phone routeno image customerId customerindex")
             .populate("productItems.product", "title productId category price");
 
           // Ensure customer image is set to null if not available
