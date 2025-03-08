@@ -1324,12 +1324,12 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
     const { start, end } = getLastMonthRange();
 
     try {
-        const orders = await OrderProduct.find({ 
-            customer: customerId, 
-            "selectedPlanDetails.dates.date": { $gte: start, $lt: end }
-        })
-        .populate("productItems.product", "name category routerPrice")
-        .populate("customer", "name email paidAmounts");
+        const orders = await OrderProduct.find({ customer: customerId })
+            .populate("productItems.product", "name category routerPrice coverimage quantity")
+            .populate("customer", "name email phone customerId paidAmounts")
+            .populate("selectedPlanDetails", "planType isActive dates status")
+            .populate("plan", "planType")
+            .select("productItems quantity address selectedPlanDetails");
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No orders found for last month" });
@@ -1337,90 +1337,98 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
 
         let totalInvoiceAmount = 0;
         let totalPaid = 0;
-        let invoiceDetails = [];
-        
+        const monthlyData = {};
+        const customer = orders[0]?.customer;
+
         orders.forEach(order => {
-            if (order.selectedPlanDetails) {
-                // Filter only delivered dates
-                order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(date => date.status === "delivered");
+            // Filter only "delivered" dates within last month
+            const deliveredDates = order.selectedPlanDetails?.dates?.filter(date => {
+                const deliveredDate = new Date(date.date);
+                return date.status === "delivered" && deliveredDate >= start && deliveredDate < end;
+            }) || [];
+
+            if (deliveredDates.length === 0) return; // Skip if no deliveries last month
+
+            // Calculate total price for this order
+            const totalRoutePrice = order.productItems.reduce((sum, item) => sum + item.routePrice, 0);
+            const orderTotalPrice = deliveredDates.length * totalRoutePrice;
+            totalInvoiceAmount += orderTotalPrice;
+
+            // Get month-year key
+            const monthYear = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+
+            if (!monthlyData[monthYear]) {
+                monthlyData[monthYear] = {
+                    orders: [],
+                    totalAmount: 0,
+                    deliveredDates: 0,
+                    paid: 0,
+                    balance: 0
+                };
             }
 
-            // Get count of delivered dates
-            const deliveredDatesCount = order.selectedPlanDetails?.dates?.length || 0;
+            // Push order details into the monthly data
+            monthlyData[monthYear].orders.push({
+                _id: order._id,
+                customer: customer,
+                selectedPlanDetails: {
+                    planType: order.selectedPlanDetails?.planType,
+                    dates: deliveredDates,
+                    isActive: order.selectedPlanDetails?.isActive
+                },
+                address: order.address,
+                productItems: order.productItems.map(item => ({
+                    product: item.product,
+                    quantity: item.quantity,
+                    routePrice: item.routePrice
+                })),
+                plan: order.plan,
+                totalPrice: orderTotalPrice
+            });
 
-            // Calculate total price (routerPrice * delivered dates count)
-            const orderTotal = order.productItems.reduce((sum, item) => sum + (item.product.routerPrice * deliveredDatesCount), 0);
-            totalInvoiceAmount += orderTotal;
-
-            invoiceDetails.push(`
-                <tr>
-                    <td>${order.productItems.map(item => item.product.name).join(", ")}</td>
-                    <td>${order.productItems.map(item => item.product.category).join(", ")}</td>
-                    <td>${deliveredDatesCount}</td>
-                    <td>$${order.productItems.map(item => item.product.routerPrice).join(", ")}</td>
-                    <td>$${orderTotal}</td>
-                </tr>
-            `);
+            // Update monthly totals
+            monthlyData[monthYear].totalAmount += orderTotalPrice;
+            monthlyData[monthYear].deliveredDates += deliveredDates.length;
         });
 
-        const customer = orders[0]?.customer;
-        if (!customer) {
-            return res.status(404).json({ message: "Customer not found" });
-        }
-
-        // Calculate total paid
-        if (customer.paidAmounts && customer.paidAmounts.length) {
+        // Get payments for last month
+        if (customer?.paidAmounts?.length) {
             customer.paidAmounts.forEach(payment => {
                 const paymentDate = new Date(payment.date);
+                const monthYear = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
+
                 if (paymentDate >= start && paymentDate < end) {
                     totalPaid += payment.amount;
+                    if (!monthlyData[monthYear]) {
+                        monthlyData[monthYear] = {
+                            orders: [],
+                            totalAmount: 0,
+                            deliveredDates: 0,
+                            paid: 0,
+                            balance: 0
+                        };
+                    }
+                    monthlyData[monthYear].paid += payment.amount;
                 }
             });
         }
 
-        const balanceDue = totalInvoiceAmount - totalPaid;
-
-        // Email content
-        const emailHtml = `
-            <h2>Monthly Invoice for ${customer.name}</h2>
-            <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Category</th>
-                        <th>Delivered Dates</th>
-                        <th>Price</th>
-                        <th>Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${invoiceDetails.join("")}
-                </tbody>
-            </table>
-            <h3>Total Invoice Amount: $${totalInvoiceAmount}</h3>
-            <h3>Total Paid: $${totalPaid}</h3>
-            <h3>Balance Due: $${balanceDue}</h3>
-        `;
-
-        // Nodemailer Transporter
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.EMAIL,
-                pass: process.env.PASSWORD,
-            },
+        // Calculate balances
+        Object.keys(monthlyData).forEach(month => {
+            monthlyData[month].balance = monthlyData[month].totalAmount - monthlyData[month].paid;
         });
 
-        // Send Email
-        await transporter.sendMail({
-            from: `"Your Company" <${process.env.EMAIL}>`,
-            to: customer.email,
-            subject: `Monthly Invoice - ${start.toLocaleDateString()}`,
-            html: emailHtml,
+        res.status(200).json({
+            totalInvoiceAmount,
+            totalPaid,
+            monthlyData: Object.keys(monthlyData).map(month => ({
+                month,
+                ...monthlyData[month]
+            }))
         });
 
-        res.status(200).json({ message: "Invoice sent successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Error sending invoice", error: error.message });
+        res.status(500).json({ message: "Error fetching invoice details", error: error.message });
     }
 });
+
