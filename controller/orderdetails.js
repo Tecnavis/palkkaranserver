@@ -1018,7 +1018,7 @@ exports.invoice = asyncHandler(async (req, res) => {
             .populate("customer", "name email phone customerId paidAmounts")
             .populate("selectedPlanDetails", "planType isActive dates status")
             .populate("plan", "planType") // Populate product details
-            .select("productItems quantity totalPrice address");
+            .select("productItems quantity totalPrice address selectedPlanDetails");
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ message: "No product items found for this customer" });
@@ -1032,8 +1032,17 @@ exports.invoice = asyncHandler(async (req, res) => {
             totalPaid = customer.paidAmounts.reduce((sum, payment) => sum + payment.amount, 0);
         }
 
-        res.status(200).json({ orders, totalPaid });
+        // Filter only delivered status from selectedPlanDetails
+        const filteredOrders = orders.map(order => {
+            return {
+                ...order.toObject(),
+                selectedPlanDetails: order.selectedPlanDetails?.filter(plan => plan.status === "delivered") || []
+            };
+        });
+
+        res.status(200).json({ orders: filteredOrders, totalPaid });
     } catch (error) {
         res.status(500).json({ message: "Error fetching product items", error: error.message });
     }
 });
+
