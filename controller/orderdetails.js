@@ -1065,7 +1065,7 @@ exports.invoice = asyncHandler(async (req, res) => {
     try {
         const orders = await OrderProduct.find({ customer: customerId })
             .populate("productItems.product", "name category routerPrice coverimage quantity")
-            .populate("customer", "name email phone customerId paidAmounts")
+.populate("customer", "name email phone customerId paidAmounts")
             .populate("selectedPlanDetails", "planType isActive dates status")
             .populate("plan", "planType")
             .select("productItems quantity address totalPrice paymentMethod selectedPlanDetails plan");
