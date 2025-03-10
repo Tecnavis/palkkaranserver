@@ -30,7 +30,7 @@ const getLastMonthRange = () => {
 };
 
 // Run on the 9th of every month at 12:00 AM
-cron.schedule("15 16 9 * *", async () => {
+cron.schedule("15 16 10 * *", async () => {
     try {
         const { start, end } = getLastMonthRange();
         
