@@ -8,6 +8,8 @@ router.post("/", orderController.createOrder);
 router.patch("/:orderId", orderController.updateDateStatus);
 // Route to update date and status to pending
 router.patch("/pending/:orderId", orderController.updateDateStatusToPending);
+//Route to update date and staus to cancel
+router.patch("/cancel/:orderId", orderController.updateDateStatusToCancel);
 
 router.get('/', orderController.getAllOrders);
 router.get('/most-ordered', orderController.getMostOrderedProducts);

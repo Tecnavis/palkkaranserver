@@ -142,6 +142,77 @@ exports.updateDateStatusToPending = async (req, res) => {
     }
 }
 
+////Route to update date and staus to cancel
+exports.updateDateStatusToCancel = async (req, res) => {
+    try {
+        const { orderId } = req.params; // Get orderId from URL params
+        const { date } = req.body; // Get date and status from the request body
+
+        // Find the order by ID
+        const order = await OrderProduct.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ error: "Order not found" });
+        }
+
+        // Convert provided date to YYYY-MM-DD format
+        const formattedDate = new Date(date).toISOString().split("T")[0]; 
+
+        // Find the specific date in the dates array, ignoring time
+        const dateToUpdate = order.selectedPlanDetails.dates.find(
+            (d) => new Date(d.date).toISOString().split("T")[0] === formattedDate
+        );
+
+        if (!dateToUpdate) {
+            return res.status(404).json({ error: "Date not found in order" });
+        }
+
+        // Update the status of the found date
+        dateToUpdate.status = "cancel";
+
+
+        //push notification to customer
+        const user = await User.findById(order.customer);
+        
+        if (user && user.fcmToken) {
+            // Check if order is delivered
+            if (status === "cancel") {
+                // Default order delivered notification
+                let notificationTitle = "Order Cancel";
+                let notificationBody = "Your today's order has been cancelled successfully.";
+
+                const notification = {  
+                    title: notificationTitle,
+                    body: notificationBody,
+                    to: user.fcmToken,
+                };
+
+                await admin.messaging().send(notification);
+            }
+        }
+                
+        // Save the updated order
+        await order.save();
+
+        // Respond with the updated order object
+        res.status(200).json({
+            message: "Date status updated successfully",
+            order: {
+                selectedPlanDetails: {
+                    planType: order.selectedPlanDetails.planType,
+                    dates: order.selectedPlanDetails.dates,
+                    isActive: order.selectedPlanDetails.isActive,
+                },
+                _id: order._id,
+                customer: order.customer,
+                cartItems: order.cartItems,
+                plan: order.plan,
+            },
+        });
+    } catch (error) {
+        console.error("Error updating date status:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+}
 
 exports.getAllOrders = async (req, res) => {
     try {
