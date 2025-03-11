@@ -54,9 +54,8 @@ exports.login = asyncHandler(async (req, res) => {
     }
 });
 
-
 exports.verifyOtp = asyncHandler(async (req, res) => {
-    const { phone, otp } = req.body;
+    const { phone, otp, fcmToken } = req.body;
 
     // Check if OTP is valid
     const storedOtp = otpStorage.get(phone);
@@ -73,6 +72,12 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Customer not found" });
     }
 
+    // Update or create FCM token
+    if (fcmToken && customer.fcmToken !== fcmToken) {
+        customer.fcmToken = fcmToken;
+        await customer.save();
+    }
+
     // Generate access token
     const accessToken = jwt.sign(
         {
@@ -84,7 +89,7 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
                 location: customer.location,
                 routeno: customer.routeno,
                 routename: customer.routename,
-            fcmToken: customer.fcmToken
+                fcmToken: customer.fcmToken,
             },
         },
         process.env.ACCESS_TOKEN_SECRET,
@@ -104,10 +109,64 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
             routeno: customer.routeno || "",
             routename: customer.routename || "",
             proofimage: customer.image || "",
-            fcmToken: customer.fcmToken|| "",
+            fcmToken: customer.fcmToken || "",
         },
     });
 });
+
+// exports.verifyOtp = asyncHandler(async (req, res) => {
+//     const { phone, otp } = req.body;
+
+//     // Check if OTP is valid
+//     const storedOtp = otpStorage.get(phone);
+//     if (!storedOtp || storedOtp != otp) {
+//         return res.status(400).json({ message: "Invalid OTP" });
+//     }
+
+//     // Remove OTP from temporary storage
+//     otpStorage.delete(phone);
+
+//     // Find customer
+//     const customer = await CustomerModel.findOne({ phone });
+//     if (!customer) {
+//         return res.status(400).json({ message: "Customer not found" });
+//     }
+
+//     // Generate access token
+//     const accessToken = jwt.sign(
+//         {
+//             user: {
+//                 username: customer.name,
+//                 userId: customer._id,
+//                 userPhone: customer.phone,
+//                 address: customer.address,
+//                 location: customer.location,
+//                 routeno: customer.routeno,
+//                 routename: customer.routename,
+//                 fcmToken: customer.fcmToken
+//             },
+//         },
+//         process.env.ACCESS_TOKEN_SECRET,
+//         { expiresIn: "15m" }
+//     );
+
+//     // Respond with access token and user details
+//     res.status(200).json({
+//         accessToken,
+//         user: {
+//             username: customer.name,
+//             _id: customer._id,
+//             UserId: customer.customerId,
+//             userPhone: customer.phone,
+//             address: customer.address,
+//             location: customer.location,
+//             routeno: customer.routeno || "",
+//             routename: customer.routename || "",
+//             proofimage: customer.image || "",
+//             fcmToken: customer.fcmToken|| "",
+//         },
+//     });
+// });
 
 
 
