@@ -730,60 +730,63 @@ exports.getCustomerInvoices = async (req, res) => {
 
 // Controller file: bottlesController.js//
 
-const sendPushNotification = async (customerId, message) => {
-    // Implement your push notification logic here (Firebase, OneSignal, etc.)
-    console.log(`Sending push notification to ${customerId}: ${message}`);
-};
-
 exports.updateReturnedBottlesByCustomer = async (req, res) => {
     try {
         const { customerId } = req.params;
         const { returnedBottles } = req.body;
         
+        // Validate input
         if (returnedBottles === undefined || isNaN(returnedBottles) || returnedBottles < 0) {
             return res.status(400).json({ message: "Valid returnedBottles value is required" });
         }
         
+        // Find all orders for this customer
         const orders = await OrderProduct.find({ customer: customerId });
         
         if (!orders.length) {
             return res.status(404).json({ message: "No orders found for this customer" });
         }
         
+        // Calculate total delivered bottles across all orders
         const totalDeliveredBottles = orders.reduce((total, order) => total + (order.bottles || 0), 0);
         
+        // Make sure returned bottles don't exceed total delivered
         const validReturnedBottles = Math.min(returnedBottles, totalDeliveredBottles);
         
+        // Determine how many bottles to allocate to each order
         let remainingToAllocate = validReturnedBottles;
         
+        // Process orders to allocate returned bottles
         const updatedOrders = await Promise.all(orders.map(async (order) => {
             if (!order.bottles || order.bottles <= 0) {
                 return order;
             }
             
             const bottlesToAllocate = Math.min(remainingToAllocate, order.bottles - (order.returnedBottles || 0));
+            
+            // ✅ Fix: Accumulate returned bottles instead of overwriting
             order.returnedBottles = (order.returnedBottles || 0) + bottlesToAllocate;
+            
+            // ✅ Fix: Calculate pending bottles correctly
             order.pendingBottles = Math.max(0, order.bottles - order.returnedBottles);
+            
             remainingToAllocate -= bottlesToAllocate;
             
             await order.save();
+            
             return order;
         }));
         
+        // Calculate summary
         const summary = {
             totalDeliveredBottles,
             totalReturnedBottles: validReturnedBottles,
             totalPendingBottles: totalDeliveredBottles - validReturnedBottles
         };
         
+        // ✅ Fix: If no pending bottles, return a specific message
         if (summary.totalPendingBottles === 0) {
             return res.status(200).json({ message: "There are no pending bottles for return." });
-        }
-
-        // ✅ Send notification if pending bottles are more than 2
-        if (summary.totalPendingBottles > 2) {
-            const notificationMessage = `You have ${summary.totalPendingBottles} pending bottles. Please wash and return them before the next order.`;
-            await sendPushNotification(customerId, notificationMessage);
         }
 
         res.status(200).json({
@@ -797,7 +800,6 @@ exports.updateReturnedBottlesByCustomer = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
-
 
 // Modified getOrdersByCustomerId to include bottles information
 exports.getOrdersByCustomerIds = async (req, res) => {
@@ -1335,25 +1337,45 @@ exports.updateDateStatus = async (req, res) => {
         dateToUpdate.status = status;
         await order.save();
 
-        // Fetch the user associated with the order to get their FCM token
-        const user = await User.findById(order.customer); // Assuming 'customer' is the user ID
-        if (user && user.fcmToken) {
-            // Construct the push notification payload
-            const message = {
-                token: user.fcmToken,
-                notification: {
-                    title: "Order Delivered",
-                    body: "Your today’s order has been delivered successfully.",
-                },
-                data: {
-                    orderId: order._id.toString(),
-                    status: status,
-                },
-            };
+     // Fetch the user associated with the order to get their FCM token
+     const user = await User.findById(order.customer);
+        
+     if (user && user.fcmToken) {
+         // Check if order is delivered
+         if (status === "delivered") {
+             // Default order delivered notification
+             let notificationTitle = "Order Delivered";
+             let notificationBody = "Your today's order has been delivered successfully.";
+             
+             // Check if the order has bottle products and if there are pending bottles > 2
+             const isBottleOrder = order.productItems.some(item => 
+                 item.product.category === "bottle" // Assuming product has category field
+             );
+             
+             // If it's a bottle order and there are more than 2 pending bottles, add bottle reminder
+             if (isBottleOrder && order.pendingBottles > 2) {
+                 notificationTitle = "Order Delivered - Bottle Return Reminder";
+                 notificationBody = `Your order has been delivered. You have ${order.pendingBottles} pending bottles. Please wash and return them with your next order.`;
+             }
+             
+             // Construct the push notification payload
+             const message = {
+                 token: user.fcmToken,
+                 notification: {
+                     title: notificationTitle,
+                     body: notificationBody,
+                 },
+                 data: {
+                     orderId: order._id.toString(),
+                     status: status,
+                     pendingBottles: order.pendingBottles.toString(),
+                 },
+             };
 
-            // Send push notification
-            await messaging.send(message);
-        }
+             // Send push notification
+             await messaging.send(message);
+         }
+     }
 
         res.status(200).json({
             message: "Your today order delivered successfully",
