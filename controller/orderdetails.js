@@ -1313,10 +1313,10 @@ if (customer && customer.fcmToken) {
 exports.updateDateStatus = async (req, res) => {
     try {
         const { orderId } = req.params; // Get orderId from URL params
-        const { date, status } = req.body; // Get date and status from the request body
+        const { date, status, bottlesReturned = 0 } = req.body; // Get date, status, and optional bottlesReturned from the request body
 
-        // Find the order by ID
-        const order = await OrderProduct.findById(orderId);
+        // Find the order by ID and populate product details
+        const order = await OrderProduct.findById(orderId).populate("productItems.product");
         if (!order) {
             return res.status(404).json({ error: "Order not found" });
         }
@@ -1335,47 +1335,80 @@ exports.updateDateStatus = async (req, res) => {
 
         // Update the status of the found date
         dateToUpdate.status = status;
+
+        // If the order is being delivered, update bottle counts
+        if (status === "delivered") {
+            // Count new bottles being delivered in this order
+            const newBottles = order.productItems.reduce((total, item) => {
+                // Check if the product is a bottle type (assuming there's a category field on the product)
+                if (item.product && item.product.category === "bottle") {
+                    return total + item.quantity;
+                }
+                return total;
+            }, 0);
+
+            // Update total bottles count (add new bottles)
+            order.bottles += newBottles;
+            
+            // Update returned bottles count (if any were returned during this delivery)
+            if (bottlesReturned > 0) {
+                order.returnedBottles += parseInt(bottlesReturned);
+            }
+            
+            // Calculate pending bottles (total - returned)
+            order.pendingBottles = order.bottles - order.returnedBottles;
+        }
+
+        // Save the updated order
         await order.save();
 
-     // Fetch the user associated with the order to get their FCM token
-     const user = await User.findById(order.customer);
+        // Fetch the user associated with the order to get their FCM token
+        const user = await User.findById(order.customer);
         
-     if (user && user.fcmToken) {
-         // Check if order is delivered
-         if (status === "delivered") {
-             // Default order delivered notification
-             let notificationTitle = "Order Delivered";
-             let notificationBody = "Your today's order has been delivered successfully.";
-             
-             // Check if the order has bottle products and if there are pending bottles > 2
-             const isBottleOrder = order.productItems.some(item => 
-                 item.product.category === "bottle" // Assuming product has category field
-             );
-             
-             // If it's a bottle order and there are more than 2 pending bottles, add bottle reminder
-             if (isBottleOrder && order.pendingBottles > 2) {
-                 notificationTitle = "Order Delivered - Bottle Return Reminder";
-                 notificationBody = `Your order has been delivered. You have ${order.pendingBottles} pending bottles. Please wash and return them with your next order.`;
-             }
-             
-             // Construct the push notification payload
-             const message = {
-                 token: user.fcmToken,
-                 notification: {
-                     title: notificationTitle,
-                     body: notificationBody,
-                 },
-                 data: {
-                     orderId: order._id.toString(),
-                     status: status,
-                     pendingBottles: order.pendingBottles.toString(),
-                 },
-             };
+        if (user && user.fcmToken) {
+            // Check if order is delivered
+            if (status === "delivered") {
+                // Default order delivered notification
+                let notificationTitle = "Order Delivered";
+                let notificationBody = "Your today's order has been delivered successfully.";
+                
+                // If there are more than 2 pending bottles, send reminder notification
+                if (order.pendingBottles > 2) {
+                    // Send a separate notification for bottle reminder
+                    const reminderMessage = {
+                        token: user.fcmToken,
+                        notification: {
+                            title: "Bottle Return Reminder",
+                            body: `You have ${order.pendingBottles} pending bottles. Please wash and return them with your next order.`,
+                        },
+                        data: {
+                            orderId: order._id.toString(),
+                            type: "bottle_reminder",
+                            pendingBottles: order.pendingBottles.toString(),
+                        },
+                    };
+                    
+                    // Send bottle reminder notification
+                    await messaging.send(reminderMessage);
+                }
+                
+                // Send regular delivery notification
+                const deliveryMessage = {
+                    token: user.fcmToken,
+                    notification: {
+                        title: notificationTitle,
+                        body: notificationBody,
+                    },
+                    data: {
+                        orderId: order._id.toString(),
+                        status: status,
+                    },
+                };
 
-             // Send push notification
-             await messaging.send(message);
-         }
-     }
+                // Send delivery notification
+                await messaging.send(deliveryMessage);
+            }
+        }
 
         res.status(200).json({
             message: "Your today order delivered successfully",
@@ -1387,8 +1420,11 @@ exports.updateDateStatus = async (req, res) => {
                 },
                 _id: order._id,
                 customer: order.customer,
-                cartItems: order.cartItems,
+                productItems: order.productItems,
                 plan: order.plan,
+                bottles: order.bottles,
+                returnedBottles: order.returnedBottles,
+                pendingBottles: order.pendingBottles
             },
         });
     } catch (error) {
