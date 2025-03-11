@@ -126,7 +126,7 @@ const generateCustomerId = async () => {
 };
 
 exports.create = asyncHandler(async (req, res) => {
-    let { name, password, phone, location, address, routeno, routename, email } = req.body;
+    let { name, password, phone, location, address, routeno, routename, email,fcmToken } = req.body;
 
     // Validate phone number
     if (!phone) {
