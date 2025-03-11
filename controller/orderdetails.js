@@ -1338,41 +1338,43 @@ exports.updateDateStatus = async (req, res) => {
         await order.save();
 
         // Fetch the user associated with the order to get their FCM token
-       // Fetch the user associated with the order to get their FCM token
-       const user = await User.findById(order.customer); // Assuming 'customer' is the user ID
-       if (user && user.fcmToken) {
-           let notificationMessages = [];
+        const user = await User.findById(order.customer); // Assuming 'customer' is the user ID
+        if (user && user.fcmToken) {
+            // Construct the push notification payload
+            const message = {
+                token: user.fcmToken,
+                notification: {
+                    title: "Order Delivered",
+                    body: "Your today’s order has been delivered successfully.",
+                },
+                data: {
+                    orderId: order._id.toString(),
+                    status: status,
+                },
+            };
 
-           // Order delivery notification
-           notificationMessages.push({
-               title: "Order Delivered",
-               body: "Your today’s order has been delivered successfully.",
-               data: { orderId: order._id.toString(), status: status },
-           });
+            // Send push notification
+            await messaging.send(message);
+        }
 
-           // Check if the customer has more than 2 pending bottles
-           if (order.pendingBottles > 2) {
-               notificationMessages.push({
-                   title: "Pending Bottles Alert",
-                   body: `You have ${order.pendingBottles} pending bottles. Please wash and return them with your next order.`,
-                   data: { pendingBottles: order.pendingBottles },
-               });
-           }
+          // Check if order is a bottle category and has more than 2 pending bottles
+          if (order.pendingBottles > 2) {
+            const pendingBottlesMessage = {
+                token: user.fcmToken,
+                notification: {
+                    title: "Pending Bottles Alert",
+                    body: `You have ${order.pendingBottles} pending bottles. Please wash and return them in the next order.`,
+                },
+                data: {
+                    orderId: order._id.toString(),
+                    pendingBottles: order.pendingBottles.toString(),
+                },
+            };
 
-           // Send notifications
-           for (const messageData of notificationMessages) {
-               const message = {
-                   token: user.fcmToken,
-                   notification: {
-                       title: messageData.title,
-                       body: messageData.body,
-                   },
-                   data: messageData.data,
-               };
-               await messaging.send(message);
-           }
-       }
-
+            // Send push notification for pending bottles
+            await messaging.send(pendingBottlesMessage);
+        }
+    
         res.status(200).json({
             message: "Your today order delivered successfully",
             order: {
