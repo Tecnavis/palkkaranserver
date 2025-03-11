@@ -801,7 +801,12 @@ exports.updateReturnedBottlesByCustomer = async (req, res) => {
     }
 };
 
-// Modified getOrdersByCustomerId to include bottles information
+// Modified getOrdersByCustomerId to include bottles information////
+const sendPushNotification = (customer, message) => {
+    // Implement your push notification logic here
+    console.log(`Push Notification to ${customer.name}: ${message}`);
+};
+
 exports.getOrdersByCustomerIds = async (req, res) => {
     try {
         const { customerId } = req.params;
@@ -821,41 +826,49 @@ exports.getOrdersByCustomerIds = async (req, res) => {
         }
 
         // Update bottles count for each order
-        const updatedOrders = await Promise.all(orders.map(async (order) => {
-            // Count total delivered bottles
-            let totalBottles = 0;
-            
-            // Filter for delivered dates
-            const deliveredDates = order.selectedPlanDetails.dates.filter(
-                date => date.status === "delivered"
-            );
-            
-            // Count bottles from bottle category products for delivered dates
-            deliveredDates.forEach(() => {
-                order.productItems.forEach(item => {
-                    if (item.product && item.product.category === "bottle") {
-                        totalBottles += item.quantity;
-                    }
+        const updatedOrders = await Promise.all(
+            orders.map(async (order) => {
+                let totalBottles = 0;
+
+                // Filter for delivered dates
+                const deliveredDates = order.selectedPlanDetails.dates.filter(
+                    (date) => date.status === "delivered"
+                );
+
+                // Count bottles from bottle category products for delivered dates
+                deliveredDates.forEach(() => {
+                    order.productItems.forEach((item) => {
+                        if (item.product && item.product.category === "bottle") {
+                            totalBottles += item.quantity;
+                        }
+                    });
                 });
-            });
-            
-            // Update the order's bottles count if it has changed
-            if (order.bottles !== totalBottles) {
-                order.bottles = totalBottles;
-                // Recalculate pending bottles
-                order.pendingBottles = Math.max(0, totalBottles - order.returnedBottles);
-                await order.save();
-            }
-            
-            return {
-                ...order.toObject(),
-                bottlesInfo: {
-                    totalDeliveredBottles: order.bottles,
-                    returnedBottles: order.returnedBottles,
-                    pendingBottles: order.pendingBottles
+
+                // Update the order's bottles count if it has changed
+                if (order.bottles !== totalBottles) {
+                    order.bottles = totalBottles;
+                    order.pendingBottles = Math.max(0, totalBottles - order.returnedBottles);
+                    await order.save();
                 }
-            };
-        }));
+
+                // Send push notification if pending bottles exceed 2
+                if (order.pendingBottles > 2) {
+                    sendPushNotification(
+                        order.customer,
+                        `You have ${order.pendingBottles} pending bottles. Please wash and return them with your next order.`
+                    );
+                }
+
+                return {
+                    ...order.toObject(),
+                    bottlesInfo: {
+                        totalDeliveredBottles: order.bottles,
+                        returnedBottles: order.returnedBottles,
+                        pendingBottles: order.pendingBottles,
+                    },
+                };
+            })
+        );
 
         res.status(200).json(updatedOrders);
     } catch (error) {
@@ -863,6 +876,7 @@ exports.getOrdersByCustomerIds = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
 
 // Function to get total bottles summary for a customer
 exports.getCustomerBottlesSummary = async (req, res) => {
@@ -1353,26 +1367,6 @@ exports.updateDateStatus = async (req, res) => {
                 },
             };
 
-        // Check for pending bottles and send an additional notification if necessary
-        const pendingBottles = order.pendingBottles;
-        const hasBottleProduct = order.productItems.some(
-            (item) => item.product && item.product.category === "bottle"
-        );
-
-        if (hasBottleProduct && pendingBottles > 2 && user && user.fcmToken) {
-            const bottleMessage = {
-                token: user.fcmToken,
-                notification: {
-                    title: "Pending Bottle Alert",
-                    body: `You have ${pendingBottles} pending bottles. Please wash and return them with your next order.`,
-                },
-                data: {
-                    orderId: order._id.toString(),
-                    pendingBottles: pendingBottles.toString(),
-                },
-            };
-            await messaging.send(bottleMessage);
-        }
             // Send push notification
             await messaging.send(message);
         }
