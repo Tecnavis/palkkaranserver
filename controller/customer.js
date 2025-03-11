@@ -659,6 +659,18 @@ exports.confirmPaidAmount = async (req, res) => {
 
         // Save the updated customer
         await customer.save();
+        // Send push notification if FCM token is available
+        if (customer.fcmToken) {
+            const message = {
+                token: customer.fcmToken,
+                notification: {
+                    title: "Payment Confirmed",
+                    body: "Your payment has been confirmed successfully.",
+                },
+            };
+
+            await admin.messaging().send(message);
+        }
 
         res.status(200).json({
             message: 'Paid amount confirmed successfully',
