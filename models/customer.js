@@ -62,6 +62,9 @@ const customerSchema = new mongoose.Schema({
     customerindex: {
         type: Number,
     },
+    fcmToken: {
+        type: String
+    }
     
 });
 

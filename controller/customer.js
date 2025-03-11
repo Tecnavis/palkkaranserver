@@ -84,6 +84,7 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
                 location: customer.location,
                 routeno: customer.routeno,
                 routename: customer.routename,
+            fcmToken: customer.fcmToken
             },
         },
         process.env.ACCESS_TOKEN_SECRET,
@@ -103,6 +104,7 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
             routeno: customer.routeno || "",
             routename: customer.routename || "",
             proofimage: customer.image || "",
+            fcmToken: customer.fcmToken|| "",
         },
     });
 });
