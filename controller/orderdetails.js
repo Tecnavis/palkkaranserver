@@ -184,7 +184,8 @@ exports.updateDateStatusToCancel = async (req, res) => {
                     to: user.fcmToken,
                 };
 
-                await admin.messaging().send(notification);
+                // await admin.messaging().send(notification);
+                await messaging.send(notification);
             }
         }
                 
