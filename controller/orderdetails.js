@@ -1308,7 +1308,7 @@ if (customer && customer.fcmToken) {
 });
 
 
-
+// Controller to update the status of a specific date in an order
 
 exports.updateDateStatus = async (req, res) => {
     try {
@@ -1353,28 +1353,30 @@ exports.updateDateStatus = async (req, res) => {
                 },
             };
 
+        // Check for pending bottles and send an additional notification if necessary
+        const pendingBottles = order.pendingBottles;
+        const hasBottleProduct = order.productItems.some(
+            (item) => item.product && item.product.category === "bottle"
+        );
+
+        if (hasBottleProduct && pendingBottles > 2 && user && user.fcmToken) {
+            const bottleMessage = {
+                token: user.fcmToken,
+                notification: {
+                    title: "Pending Bottle Alert",
+                    body: `You have ${pendingBottles} pending bottles. Please wash and return them with your next order.`,
+                },
+                data: {
+                    orderId: order._id.toString(),
+                    pendingBottles: pendingBottles.toString(),
+                },
+            };
+            await messaging.send(bottleMessage);
+        }
             // Send push notification
             await messaging.send(message);
         }
 
-          // Check if order is a bottle category and has more than 2 pending bottles
-          if (order.pendingBottles > 2) {
-            const pendingBottlesMessage = {
-                token: user.fcmToken,
-                notification: {
-                    title: "Pending Bottles Alert",
-                    body: `You have ${order.pendingBottles} pending bottles. Please wash and return them in the next order.`,
-                },
-                data: {
-                    orderId: order._id.toString(),
-                    pendingBottles: order.pendingBottles.toString(),
-                },
-            };
-
-            // Send push notification for pending bottles
-            await messaging.send(pendingBottlesMessage);
-        }
-    
         res.status(200).json({
             message: "Your today order delivered successfully",
             order: {
