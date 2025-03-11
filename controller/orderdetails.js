@@ -6,6 +6,7 @@ const asyncHandler = require("express-async-handler");
 const nodemailer = require("nodemailer");
 const messaging = require('../config/firebaseconfig'); // Import Firebase Config
 const User =require('../models/customer')
+const mongoose = require("mongoose");
 require('dotenv').config(); 
 
 // Create an order
@@ -91,57 +92,6 @@ exports.createOrder = async (req, res) => {
     }
 };
 
-// Update date status to deliver
-// exports.updateDateStatus = async (req, res) => {
-//     try {
-//         const { orderId } = req.params; // Get orderId from URL params
-//         const { date, status } = req.body; // Get date and status from the request body
-
-//         // Find the order by ID
-//         const order = await OrderProduct.findById(orderId);
-//         if (!order) {
-//             return res.status(404).json({ error: "Order not found" });
-//         }
-
-//         // Convert provided date to YYYY-MM-DD format
-//         const formattedDate = new Date(date).toISOString().split("T")[0]; 
-
-//         // Find the specific date in the dates array, ignoring time
-//         const dateToUpdate = order.selectedPlanDetails.dates.find(
-//             (d) => new Date(d.date).toISOString().split("T")[0] === formattedDate
-//         );
-
-//         if (!dateToUpdate) {
-//             return res.status(404).json({ error: "Date not found in order" });
-//         }
-
-//         // Update the status of the found date
-//         dateToUpdate.status = status;
-
-//         // Save the updated order
-//         await order.save();
-
-//         // Respond with the updated order object
-//         res.status(200).json({
-//             message: "Your Today order delivered successfully",
-//             order: {
-//                 selectedPlanDetails: {
-//                     planType: order.selectedPlanDetails.planType,
-//                     dates: order.selectedPlanDetails.dates,
-//                     isActive: order.selectedPlanDetails.isActive,
-//                 },
-//                 _id: order._id,
-//                 customer: order.customer,
-//                 cartItems: order.cartItems,
-//                 plan: order.plan,
-//             },
-//         });
-//     } catch (error) {
-//         console.error("Error updating date status:", error);
-//         res.status(500).json({ error: "Internal server error" });
-//     }
-// };
-//update date status to pending
 exports.updateDateStatusToPending = async (req, res) => {
     try {
         const { orderId } = req.params; // Get orderId from URL params
@@ -394,9 +344,6 @@ exports.stopPlan = async (req, res) => {
     }
 };
 
-
-const mongoose = require("mongoose");
-const customer = require("../models/customer");
 
 exports.changePlan = async (req, res) => {
     const { orderId, newPlanType, customDates, weeklyDays, interval, startDate } = req.body;
@@ -1318,6 +1265,18 @@ exports.sendMonthlyInvoice = asyncHandler(async (req, res) => {
 
         const htmlTable = formatInvoiceTable(Object.values(monthlyData));
         await sendEmail(customer.email, "Your Monthly Invoice Report", htmlTable);
+  // Push notification after sending email
+if (customer && customer.fcmToken) {
+    const message = {
+        token: customer.fcmToken,
+        notification: {
+            title: "Invoice Sent Successfully",
+            body: "Your last month's invoice has been sent successfully.",
+        },
+    };
+
+    await messaging.send(message);
+}
 
         res.status(200).json({
             message: "Invoice sent successfully",

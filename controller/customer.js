@@ -664,6 +664,19 @@ exports.confirmPaidAmount = async (req, res) => {
             message: 'Paid amount confirmed successfully',
             confirmedPayment: customer.paidAmounts[paidAmountIndex]
         });
+        // Send a notification
+           // Push notification after sending email
+           if (customer && customer.fcmToken) {
+            const message = {
+                token: customer.fcmToken,
+                notification: {
+                    title: "Amount Received",
+                    body: "Your amount has been received successfully.",
+                },
+            };
+
+            await messaging.send(message);
+        }
     } catch (error) {
         console.error('Error confirming paid amount:', error);
         res.status(500).json({ 
