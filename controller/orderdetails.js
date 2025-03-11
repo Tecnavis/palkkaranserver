@@ -441,6 +441,20 @@ exports.changePlan = async (req, res) => {
 
         await order.save();
         res.status(200).json({ message: "Plan updated successfully", order });
+        const user = await User.findById(order.customer); // Assuming 'customer' is the user ID
+        if (user && user.fcmToken) {
+            // Construct the push notification payload
+            const message = {
+                token: user.fcmToken,
+                notification: {
+                    title: "Changed Plan",
+                    body: "Your plan has been changed.",
+                },
+            };
+
+            // Send push notification
+            await messaging.send(message);
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
