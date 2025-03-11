@@ -180,7 +180,9 @@ exports.create = asyncHandler(async (req, res) => {
         address: parsedAddress,
         routeno,
         routename,
-        email
+        email,
+        fcmToken
+
     });
 
     if (customer) {
@@ -194,6 +196,7 @@ exports.create = asyncHandler(async (req, res) => {
             routeno: customer.routeno,
             routename: customer.routename,
             email: customer.email,
+            fcmToken: customer.fcmToken,
             message: "Customer created successfully. Please confirm your account to be able to login."
         });
     } else {
