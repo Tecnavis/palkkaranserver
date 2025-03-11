@@ -146,7 +146,7 @@ exports.updateDateStatusToPending = async (req, res) => {
 exports.updateDateStatusToCancel = async (req, res) => {
     try {
         const { orderId } = req.params; // Get orderId from URL params
-        const { date } = req.body; // Get date from request body
+        const { date } = req.body; // Get date and status from the request body
 
         // Find the order by ID
         const order = await OrderProduct.findById(orderId);
@@ -155,7 +155,7 @@ exports.updateDateStatusToCancel = async (req, res) => {
         }
 
         // Convert provided date to YYYY-MM-DD format
-        const formattedDate = new Date(date).toISOString().split("T")[0];
+        const formattedDate = new Date(date).toISOString().split("T")[0]; 
 
         // Find the specific date in the dates array, ignoring time
         const dateToUpdate = order.selectedPlanDetails.dates.find(
@@ -169,26 +169,17 @@ exports.updateDateStatusToCancel = async (req, res) => {
         // Update the status of the found date
         dateToUpdate.status = "cancel";
 
-        // Push notification to customer
-        const user = await User.findById(order.customer);
-        
-        if (user && user.fcmToken) {
-            // Check if order date status is cancelled
-            if (dateToUpdate.status === "cancel") {
-                let notificationTitle = "Order Cancelled";
-                let notificationBody = "Your today's order has been cancelled successfully.";
 
-                const notification = {  
-                    title: notificationTitle,
-                    body: notificationBody,
-                    to: user.fcmToken,
-                };
+        //push notification to customer
+        // const customer = await Customer.findById(order.customer);
+        // if (customer) {
+        //     const notification = {
+        //         title: "Order Cancelled",
+        //         body: "Your order has been cancelled.",
+        //     };
+        //     await sendNotification(customer.fcmToken, notification);
+        // }
 
-                // await admin.messaging().send(notification);
-                await messaging.send(notification);
-            }
-        }
-                
         // Save the updated order
         await order.save();
 
@@ -211,8 +202,7 @@ exports.updateDateStatusToCancel = async (req, res) => {
         console.error("Error updating date status:", error);
         res.status(500).json({ error: "Internal server error" });
     }
-};
-
+}
 
 exports.getAllOrders = async (req, res) => {
     try {
