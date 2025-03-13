@@ -578,9 +578,51 @@ exports.updateCustomerImage = async (req, res) => {
 
 
 // Add paid amount (unconfirmed)
+// exports.addPaidAmount = async (req, res) => {
+//     try {
+//         const { customerId, amount } = req.body;
+
+//         // Validate input
+//         if (!customerId || !amount || amount <= 0) {
+//             return res.status(400).json({ 
+//                 message: 'Invalid customer ID or amount' 
+//             });
+//         }
+
+//         // Find the customer
+//         const customer = await CustomerModel.findOne({ customerId });
+
+//         if (!customer) {
+//             return res.status(404).json({ 
+//                 message: 'Customer not found' 
+//             });
+//         }
+
+//         // Add unconfirmed paid amount
+//         customer.paidAmounts.push({
+//             amount: amount,
+//             date: new Date(),
+//             isGet: false // Initially set to unconfirmed
+//         });
+
+//         // Save the customer
+//         await customer.save();
+
+//         res.status(201).json({
+//             message: 'Paid amount added successfully',
+//             paidAmount: customer.paidAmounts[customer.paidAmounts.length - 1]
+//         });
+//     } catch (error) {
+//         console.error('Error adding paid amount:', error);
+//         res.status(500).json({ 
+//             message: 'Internal server error', 
+//             error: error.message 
+//         });
+//     }
+// };
 exports.addPaidAmount = async (req, res) => {
     try {
-        const { customerId, amount } = req.body;
+        const { customerId, amount, date } = req.body;
 
         // Validate input
         if (!customerId || !amount || amount <= 0) {
@@ -588,6 +630,9 @@ exports.addPaidAmount = async (req, res) => {
                 message: 'Invalid customer ID or amount' 
             });
         }
+
+        // Validate date (optional: ensure it's a valid date)
+        const paidDate = date ? new Date(date) : new Date(); // Use provided date or current date
 
         // Find the customer
         const customer = await CustomerModel.findOne({ customerId });
@@ -598,10 +643,10 @@ exports.addPaidAmount = async (req, res) => {
             });
         }
 
-        // Add unconfirmed paid amount
+        // Add paid amount with the provided date
         customer.paidAmounts.push({
             amount: amount,
-            date: new Date(),
+            date: paidDate,
             isGet: false // Initially set to unconfirmed
         });
 
