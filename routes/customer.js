@@ -48,5 +48,6 @@ router.get('/unconfirmed-paid-amounts/:customerId', Controller.getUnconfirmedPai
 router.get("/routeno-based-customer/:routeno", Controller.getCustomersByRouteNo);
 //update customerindex by customerid
 router.put("/update-customer-index/:customerId", Controller.updateCustomerIndex);
-router.put("/update-payment", Controller.updatePayment);
+
+router.put("/customer/update-payment/:paymentId", Controller.updatePayment);
 module.exports = router;

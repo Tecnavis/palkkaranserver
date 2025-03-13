@@ -788,31 +788,26 @@ exports.updateCustomerIndex = async (req, res) => {
 
 //update payment by id
 
+// Update payment details (amount or date)
 exports.updatePayment = async (req, res) => {
     try {
-      const { customerId, paymentId, amount, date } = req.body;
+      const { paymentId } = req.params;
+      const { amount, date } = req.body;
   
-      // Find the customer
-      const customer = await CustomerModel.findOne({ customerId });
-      if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
+      const updatedPayment = await Payment.findByIdAndUpdate(
+        paymentId,
+        { amount, date },
+        { new: true }
+      );
+  
+      if (!updatedPayment) {
+        return res.status(404).json({ success: false, message: "Payment not found" });
       }
   
-      // Find the payment in the payment history
-      const payment = customer.paidAmounts.id(paymentId);
-      if (!payment) {
-        return res.status(404).json({ message: "Payment record not found" });
-      }
-  
-      // Update the payment details
-      payment.amount = amount;
-      payment.date = date;
-  
-      await customer.save();
-  
-      res.status(200).json({ message: "Payment updated successfully", payment });
+      res.json({ success: true, updatedPayment });
     } catch (error) {
-      res.status(500).json({ message: "Error updating payment", error });
+      res.status(500).json({ success: false, message: "Server error" });
     }
   };
+  
   
