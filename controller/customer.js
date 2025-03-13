@@ -790,24 +790,61 @@ exports.updateCustomerIndex = async (req, res) => {
 
 // Update payment details (amount or date)
 exports.updatePayment = async (req, res) => {
+    const { customerId, paidAmountId, date, amount } = req.body;
+    
+    if (!customerId || !paidAmountId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Customer ID and payment ID are required" 
+      });
+    }
+    
     try {
-      const { paymentId } = req.params;
-      const { amount, date } = req.body;
-  
-      const updatedPayment = await Payment.findByIdAndUpdate(
-        paymentId,
-        { amount, date },
-        { new: true }
-      );
-  
-      if (!updatedPayment) {
-        return res.status(404).json({ success: false, message: "Payment not found" });
+      // Find the customer
+      const customer = await CustomerModel.findOne({ customerId });
+      
+      if (!customer) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Customer not found" 
+        });
       }
-  
-      res.json({ success: true, updatedPayment });
+      
+      // Find the payment in the customer's paidAmounts array
+      const paymentIndex = customer.paidAmounts.findIndex(
+        payment => payment._id.toString() === paidAmountId
+      );
+      
+      if (paymentIndex === -1) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Payment not found" 
+        });
+      }
+      
+      // Update the payment details
+      if (date) {
+        customer.paidAmounts[paymentIndex].date = new Date(date);
+      }
+      
+      if (amount) {
+        customer.paidAmounts[paymentIndex].amount = parseFloat(amount);
+      }
+      
+      // Save the updated customer
+      await customer.save();
+      
+      return res.status(200).json({
+        success: true,
+        message: "Payment details updated successfully",
+        paidAmount: customer.paidAmounts[paymentIndex]
+      });
     } catch (error) {
-      res.status(500).json({ success: false, message: "Server error" });
+      console.error("Error updating payment details:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error updating payment details",
+        error: error.message
+      });
     }
   };
-  
-  
