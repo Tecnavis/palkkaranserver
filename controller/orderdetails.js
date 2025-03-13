@@ -416,121 +416,121 @@ exports.stopPlan = async (req, res) => {
 };
 
 
-exports.changePlan = async (req, res) => {
-    const { orderId, newPlanType, customDates, weeklyDays, interval, startDate } = req.body;
+// exports.changePlan = async (req, res) => {
+//     const { orderId, newPlanType, customDates, weeklyDays, interval, startDate } = req.body;
 
-    try {
-        const order = await OrderProduct.findById(orderId);
-        if (!order) {
-            return res.status(404).json({ message: "Order not found" });
-        }
+//     try {
+//         const order = await OrderProduct.findById(orderId);
+//         if (!order) {
+//             return res.status(404).json({ message: "Order not found" });
+//         }
 
-        // Retain only previous dates before the change
-        const previousDates = order.selectedPlanDetails.dates
-            .filter(d => new Date(d.date) < new Date())
-            .map(d => ({
-                date: new Date(d.date).setUTCHours(0, 0, 0, 0), // Normalize date
-                status: d.status,
-            }));
+//         // Retain only previous dates before the change
+//         const previousDates = order.selectedPlanDetails.dates
+//             .filter(d => new Date(d.date) < new Date())
+//             .map(d => ({
+//                 date: new Date(d.date).setUTCHours(0, 0, 0, 0), // Normalize date
+//                 status: d.status,
+//             }));
 
-        let newDates = [];
-        const today = new Date();
-        today.setUTCHours(0, 0, 0, 0); // Normalize today
+//         let newDates = [];
+//         const today = new Date();
+//         today.setUTCHours(0, 0, 0, 0); // Normalize today
 
-        switch (newPlanType) {
-            case "daily":
-            case "monthly":
-                newDates = Array.from({ length: 30 }, (_, i) => {
-                    let date = new Date();
-                    date.setDate(today.getDate() + i);
-                    date.setUTCHours(0, 0, 0, 0); // Normalize
-                    return date;
-                });
-                break;
+//         switch (newPlanType) {
+//             case "daily":
+//             case "monthly":
+//                 newDates = Array.from({ length: 30 }, (_, i) => {
+//                     let date = new Date();
+//                     date.setDate(today.getDate() + i);
+//                     date.setUTCHours(0, 0, 0, 0); // Normalize
+//                     return date;
+//                 });
+//                 break;
 
-            case "custom":
-                if (!customDates || !Array.isArray(customDates)) {
-                    return res.status(400).json({ message: "Invalid custom dates" });
-                }
-                newDates = customDates.map(date => {
-                    let d = new Date(date);
-                    d.setUTCHours(0, 0, 0, 0); // Normalize
-                    return d;
-                });
-                break;
+//             case "custom":
+//                 if (!customDates || !Array.isArray(customDates)) {
+//                     return res.status(400).json({ message: "Invalid custom dates" });
+//                 }
+//                 newDates = customDates.map(date => {
+//                     let d = new Date(date);
+//                     d.setUTCHours(0, 0, 0, 0); // Normalize
+//                     return d;
+//                 });
+//                 break;
 
-            case "weekly":
-                if (!weeklyDays || !Array.isArray(weeklyDays)) {
-                    return res.status(400).json({ message: "Invalid weekly days" });
-                }
-                newDates = weeklyDays.map(day => {
-                    const offset = (day - today.getDay() + 7) % 7;
-                    let nextDay = new Date();
-                    nextDay.setDate(today.getDate() + offset);
-                    nextDay.setUTCHours(0, 0, 0, 0); // Normalize
-                    return nextDay;
-                });
-                break;
+//             case "weekly":
+//                 if (!weeklyDays || !Array.isArray(weeklyDays)) {
+//                     return res.status(400).json({ message: "Invalid weekly days" });
+//                 }
+//                 newDates = weeklyDays.map(day => {
+//                     const offset = (day - today.getDay() + 7) % 7;
+//                     let nextDay = new Date();
+//                     nextDay.setDate(today.getDate() + offset);
+//                     nextDay.setUTCHours(0, 0, 0, 0); // Normalize
+//                     return nextDay;
+//                 });
+//                 break;
 
-            case "alternative":
-                if (!startDate || !interval || typeof interval !== "number") {
-                    return res.status(400).json({ message: "Invalid alternative plan details" });
-                }
-                const altStartDate = new Date(startDate);
-                altStartDate.setUTCHours(0, 0, 0, 0);
-                newDates = Array.from({ length: 15 }, (_, i) => {
-                    let nextDate = new Date(altStartDate);
-                    nextDate.setDate(altStartDate.getDate() + i * interval);
-                    nextDate.setUTCHours(0, 0, 0, 0); // Normalize
-                    return nextDate;
-                });
-                break;
+//             case "alternative":
+//                 if (!startDate || !interval || typeof interval !== "number") {
+//                     return res.status(400).json({ message: "Invalid alternative plan details" });
+//                 }
+//                 const altStartDate = new Date(startDate);
+//                 altStartDate.setUTCHours(0, 0, 0, 0);
+//                 newDates = Array.from({ length: 15 }, (_, i) => {
+//                     let nextDate = new Date(altStartDate);
+//                     nextDate.setDate(altStartDate.getDate() + i * interval);
+//                     nextDate.setUTCHours(0, 0, 0, 0); // Normalize
+//                     return nextDate;
+//                 });
+//                 break;
 
-            default:
-                return res.status(400).json({ message: "Invalid plan type" });
-        }
+//             default:
+//                 return res.status(400).json({ message: "Invalid plan type" });
+//         }
 
-        // Remove duplicate dates
-        const uniqueDates = new Map();
+//         // Remove duplicate dates
+//         const uniqueDates = new Map();
         
-        // Add previous dates to the map
-        previousDates.forEach(({ date, status }) => {
-            uniqueDates.set(date, { date: new Date(date), status });
-        });
+//         // Add previous dates to the map
+//         previousDates.forEach(({ date, status }) => {
+//             uniqueDates.set(date, { date: new Date(date), status });
+//         });
 
-        // Add new dates to the map if not already present
-        newDates.forEach(date => {
-            if (!uniqueDates.has(date.getTime())) {
-                uniqueDates.set(date.getTime(), { date, status: "pending" });
-            }
-        });
+//         // Add new dates to the map if not already present
+//         newDates.forEach(date => {
+//             if (!uniqueDates.has(date.getTime())) {
+//                 uniqueDates.set(date.getTime(), { date, status: "pending" });
+//             }
+//         });
 
-        // Convert map back to an array
-        order.selectedPlanDetails.planType = newPlanType;
-        order.selectedPlanDetails.dates = Array.from(uniqueDates.values());
-        order.selectedPlanDetails.isActive = true;
+//         // Convert map back to an array
+//         order.selectedPlanDetails.planType = newPlanType;
+//         order.selectedPlanDetails.dates = Array.from(uniqueDates.values());
+//         order.selectedPlanDetails.isActive = true;
 
-        await order.save();
-        res.status(200).json({ message: "Plan updated successfully", order });
-        const user = await User.findById(order.customer); // Assuming 'customer' is the user ID
-        if (user && user.fcmToken) {
-            // Construct the push notification payload
-            const message = {
-                token: user.fcmToken,
-                notification: {
-                    title: "Changed Plan",
-                    body: "Your plan has been changed.",
-                },
-            };
+//         await order.save();
+//         res.status(200).json({ message: "Plan updated successfully", order });
+//         const user = await User.findById(order.customer); // Assuming 'customer' is the user ID
+//         if (user && user.fcmToken) {
+//             // Construct the push notification payload
+//             const message = {
+//                 token: user.fcmToken,
+//                 notification: {
+//                     title: "Changed Plan",
+//                     body: "Your plan has been changed.",
+//                 },
+//             };
 
-            // Send push notification
-            await messaging.send(message);
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-};
+//             // Send push notification
+//             await messaging.send(message);
+//         }
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: "Internal server error" });
+//     }
+// };
 
 
 
@@ -1501,5 +1501,136 @@ exports.updateDateStatus = async (req, res) => {
     } catch (error) {
         console.error("Error updating date status:", error);
         res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+
+
+exports.changePlan = async (req, res) => {
+    const { orderId, newPlanType, customDates, weeklyDays, interval, startDate } = req.body;
+
+    try {
+        const order = await OrderProduct.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        // Retain only previous dates before the change
+        const previousDates = order.selectedPlanDetails.dates
+            .filter(d => new Date(d.date) < new Date())
+            .map(d => ({
+                date: new Date(d.date).setUTCHours(0, 0, 0, 0), // Normalize date
+                status: d.status,
+            }));
+
+        let newDates = [];
+        const now = new Date();
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0); // Normalize today
+        
+        // Determine the start date
+        let start = new Date();
+        if (now.getHours() >= 6) {
+            start.setDate(start.getDate() + 1); // Move to next day if after 6 AM
+        }
+        start.setUTCHours(0, 0, 0, 0); // Normalize start date
+
+        switch (newPlanType) {
+            case "daily":
+            case "monthly":
+                newDates = Array.from({ length: 30 }, (_, i) => {
+                    let date = new Date(start);
+                    date.setDate(start.getDate() + i);
+                    date.setUTCHours(0, 0, 0, 0); // Normalize
+                    return date;
+                });
+                break;
+
+            case "custom":
+                if (!customDates || !Array.isArray(customDates)) {
+                    return res.status(400).json({ message: "Invalid custom dates" });
+                }
+                newDates = customDates.map(date => {
+                    let d = new Date(date);
+                    d.setUTCHours(0, 0, 0, 0); // Normalize
+                    return d;
+                });
+                break;
+
+            case "weekly":
+                if (!weeklyDays || !Array.isArray(weeklyDays)) {
+                    return res.status(400).json({ message: "Invalid weekly days" });
+                }
+                newDates = weeklyDays.map(day => {
+                    const offset = (day - start.getDay() + 7) % 7;
+                    let nextDay = new Date(start);
+                    nextDay.setDate(start.getDate() + offset);
+                    nextDay.setUTCHours(0, 0, 0, 0); // Normalize
+                    return nextDay;
+                });
+                break;
+
+            case "alternative":
+                if (!startDate || !interval || typeof interval !== "number") {
+                    return res.status(400).json({ message: "Invalid alternative plan details" });
+                }
+                const altStartDate = new Date(startDate);
+                altStartDate.setUTCHours(0, 0, 0, 0);
+                
+                // Adjust altStartDate if order is changed after 6 AM
+                if (now.getHours() >= 6) {
+                    altStartDate.setDate(altStartDate.getDate() + 1);
+                }
+                
+                newDates = Array.from({ length: 15 }, (_, i) => {
+                    let nextDate = new Date(altStartDate);
+                    nextDate.setDate(altStartDate.getDate() + i * interval);
+                    nextDate.setUTCHours(0, 0, 0, 0); // Normalize
+                    return nextDate;
+                });
+                break;
+
+            default:
+                return res.status(400).json({ message: "Invalid plan type" });
+        }
+
+        // Remove duplicate dates
+        const uniqueDates = new Map();
+        
+        // Add previous dates to the map
+        previousDates.forEach(({ date, status }) => {
+            uniqueDates.set(date, { date: new Date(date), status });
+        });
+
+        // Add new dates to the map if not already present
+        newDates.forEach(date => {
+            if (!uniqueDates.has(date.getTime())) {
+                uniqueDates.set(date.getTime(), { date, status: "pending" });
+            }
+        });
+
+        // Convert map back to an array
+        order.selectedPlanDetails.planType = newPlanType;
+        order.selectedPlanDetails.dates = Array.from(uniqueDates.values());
+        order.selectedPlanDetails.isActive = true;
+
+        await order.save();
+        res.status(200).json({ message: "Plan updated successfully", order });
+
+        // Send notification
+        const user = await User.findById(order.customer); // Assuming 'customer' is the user ID
+        if (user && user.fcmToken) {
+            const message = {
+                token: user.fcmToken,
+                notification: {
+                    title: "Changed Plan",
+                    body: "Your plan has been changed.",
+                },
+            };
+            await messaging.send(message);
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
     }
 };
