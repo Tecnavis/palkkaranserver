@@ -790,7 +790,7 @@ exports.updateCustomerIndex = async (req, res) => {
 
 exports.updatePayment = async (req, res) => {
     try {
-      const { customerId, paymentId, amount, paidDate } = req.body;
+      const { customerId, paymentId, amount, date } = req.body;
   
       // Find the customer
       const customer = await CustomerModel.findOne({ customerId });
@@ -806,7 +806,7 @@ exports.updatePayment = async (req, res) => {
   
       // Update the payment details
       payment.amount = amount;
-      payment.paidDate = paidDate;
+      payment.date = date;
   
       await customer.save();
   
