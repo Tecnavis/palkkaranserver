@@ -9,6 +9,7 @@ const User =require('../models/customer')
 const mongoose = require("mongoose");
 require('dotenv').config(); 
 const admin = require("firebase-admin"); 
+const Notification = require("../models/notification");
 // Create an order
 exports.createOrder = async (req, res) => {
     try {
