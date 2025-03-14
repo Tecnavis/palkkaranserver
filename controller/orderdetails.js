@@ -9,7 +9,6 @@ const User =require('../models/customer')
 const mongoose = require("mongoose");
 require('dotenv').config(); 
 const admin = require("firebase-admin"); 
-const Notification = require("../models/notification");
 // Create an order
 exports.createOrder = async (req, res) => {
     try {
@@ -1631,14 +1630,7 @@ exports.changePlan = async (req, res) => {
             };
             await messaging.send(message);
         }
-        if (user) {
-            const notificationMessage = `Your plan has been changed to ${newPlanType}.`;
 
-            await Notification.create({
-                message: notificationMessage,
-                customerId: user._id,
-            });
-        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
