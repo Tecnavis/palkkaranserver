@@ -1619,6 +1619,7 @@ exports.changePlan = async (req, res) => {
 
         // Send notification
         const user = await User.findById(order.customer); // Assuming 'customer' is the user ID
+        
         if (user && user.fcmToken) {
             const message = {
                 token: user.fcmToken,
@@ -1628,6 +1629,14 @@ exports.changePlan = async (req, res) => {
                 },
             };
             await messaging.send(message);
+        }
+        if (user) {
+            const notificationMessage = `Your plan has been changed to ${newPlanType}.`;
+
+            await Notification.create({
+                message: notificationMessage,
+                customerId: user._id,
+            });
         }
     } catch (error) {
         console.error(error);
