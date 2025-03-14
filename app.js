@@ -23,7 +23,6 @@ var review = require('./routes/review');
 var banner = require('./routes/banner');
 var route = require('./routes/route');
 var FCM = require('./routes/fcm');
-var notification = require('./routes/notification');
 // Connect to database
 connectDB();
 
@@ -64,7 +63,6 @@ app.use('/review',review)
 app.use('/banner',banner)
 app.use('/route',route)
 app.use('/fcm',FCM)
-app.use('/notification',notification)
 // 404 handler - This should come after all valid routes
 app.use((req, res, next) => {
   res.status(404).json({
