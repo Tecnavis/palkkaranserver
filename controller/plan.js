@@ -1,6 +1,7 @@
 const Plan = require("../models/plans");
 const Customer = require("../models/customer");
 
+const OrderProduct = require("../models/orderdetails");
 // Utility function to calculate 30 days from the current date
 const getStartDate = () => {
     const now = new Date();
@@ -210,66 +211,67 @@ exports.getPlansByCustomerId = async (req, res) => {
     }
 };
 
-
-exports.applyLeave = async (req, res) => {
+async (req, res) => {
     const { customerId, dates } = req.body; // Expecting an array of dates
 
     try {
+        // Convert incoming dates to Date objects with time set to midnight for consistent comparison
+        const leaveDates = dates.map(date => {
+            const leaveDate = new Date(date);
+            leaveDate.setHours(0, 0, 0, 0);
+            return leaveDate;
+        });
+
         // Find all active plans for the customer
         const plans = await Plan.find({ 
             customer: customerId, 
             isActive: true 
         });
 
-        if (plans.length === 0) {
-            return res.status(404).json({ message: "No active plans found for this customer" });
-        }
-
-        // Convert incoming dates to strings for easier comparison
-        const leaveDates = dates.map(date => new Date(date).toISOString().split('T')[0]);
-
         let updatedPlans = [];
-        
+
+        // Process each plan
         for (const plan of plans) {
-            // Remove leave dates from plan.dates
-            const newDates = plan.dates.filter(planDate => {
+            const initialLength = plan.dates.length;
+
+            // Remove leave dates from the plan
+            plan.dates = plan.dates.filter(planDate => {
                 const planDateString = new Date(planDate).toISOString().split('T')[0];
-                return !leaveDates.includes(planDateString);
+                return !leaveDates.some(leaveDate => leaveDate.toISOString().split('T')[0] === planDateString);
             });
 
-            // Remove leave dates from plan.leaves
-            const newLeaves = plan.leaves.filter(leaveDate => {
-                const leaveDateString = new Date(leaveDate).toISOString().split('T')[0];
-                return !leaveDates.includes(leaveDateString);
-            });
-
-            // Update dynamicDates if present
-            if (plan.dynamicDates && plan.dynamicDates.length > 0) {
-                plan.dynamicDates = plan.dynamicDates.filter(dynamicDate => {
-                    const dynamicDateString = new Date(dynamicDate.date).toISOString().split('T')[0];
-                    return !leaveDates.includes(dynamicDateString);
-                });
-            }
-
-            // Check if changes were made
-            if (newDates.length !== plan.dates.length || newLeaves.length !== plan.leaves.length) {
-                plan.dates = newDates;
-                plan.leaves = newLeaves;
-                
+            if (plan.dates.length !== initialLength) {
                 await plan.save();
                 updatedPlans.push(plan);
             }
         }
 
-        if (updatedPlans.length === 0) {
-            return res.status(400).json({ 
-                message: "No matching leave dates found in any plan to remove." 
-            });
+        // Find all orders related to this customer
+        const orders = await OrderProduct.find({ customer: customerId });
+
+        let updatedOrders = [];
+
+        for (const order of orders) {
+            if (order.selectedPlanDetails && order.selectedPlanDetails.dates) {
+                const initialLength = order.selectedPlanDetails.dates.length;
+
+                // Remove leave dates from the order
+                order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(orderDate => {
+                    const orderDateString = new Date(orderDate.date).toISOString().split('T')[0];
+                    return !leaveDates.some(leaveDate => leaveDate.toISOString().split('T')[0] === orderDateString);
+                });
+
+                if (order.selectedPlanDetails.dates.length !== initialLength) {
+                    await order.save();
+                    updatedOrders.push(order);
+                }
+            }
         }
 
         res.status(200).json({ 
-            message: `Leave dates removed successfully across ${updatedPlans.length} plans`, 
-            updatedPlans 
+            message: `Leave applied successfully. ${updatedPlans.length} plans and ${updatedOrders.length} orders updated.`,
+            updatedPlans,
+            updatedOrders
         });
 
     } catch (error) {
@@ -277,10 +279,6 @@ exports.applyLeave = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
-
-
-
-
 
 
 //original
