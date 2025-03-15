@@ -214,72 +214,126 @@ exports.applyLeave = async (req, res) => {
     const { customerId, dates } = req.body; // Expecting an array of dates
 
     try {
-        // Convert incoming dates to Date objects with time set to midnight for consistent comparison
-        const leaveDates = dates.map(date => {
-            const leaveDate = new Date(date);
-            leaveDate.setHours(0, 0, 0, 0);
-            return leaveDate;
-        });
-
         // Find all active plans for the customer
         const plans = await Plan.find({ 
             customer: customerId, 
             isActive: true 
         });
 
-        let updatedPlans = [];
-
-        // Process each plan
-        for (const plan of plans) {
-            const initialLength = plan.dates.length;
-
-            // Remove leave dates from the plan
-            plan.dates = plan.dates.filter(planDate => {
-                const planDateString = new Date(planDate).toISOString().split('T')[0];
-                return !leaveDates.some(leaveDate => leaveDate.toISOString().split('T')[0] === planDateString);
-            });
-
-            if (plan.dates.length !== initialLength) {
-                await plan.save();
-                updatedPlans.push(plan);
-            }
+        if (plans.length === 0) {
+            return res.status(404).json({ message: "No active plans found for this customer" });
         }
 
-        // Find all orders related to this customer
-        const orders = await OrderProduct.find({ customer: customerId });
+        // Convert incoming dates to Date objects with time set to midnight for consistent comparison
+        const leaveDates = dates.map(date => {
+            const leaveDate = new Date(date);
+            return leaveDate;
+        });
 
+        let updatedPlans = [];
         let updatedOrders = [];
-
-        for (const order of orders) {
-            if (order.selectedPlanDetails && order.selectedPlanDetails.dates) {
-                const initialLength = order.selectedPlanDetails.dates.length;
-
-                // Remove leave dates from the order
-                order.selectedPlanDetails.dates = order.selectedPlanDetails.dates.filter(orderDate => {
-                    const orderDateString = new Date(orderDate.date).toISOString().split('T')[0];
-                    return !leaveDates.some(leaveDate => leaveDate.toISOString().split('T')[0] === orderDateString);
+        
+        // Process each plan
+        for (const plan of plans) {
+            // For each leave date, check if it exists in the plan's dates array
+            const relevantLeaveDates = leaveDates.filter(leaveDate => {
+                // Check if the leave date exists in the plan's dates array
+                return plan.dates.some(planDate => {
+                    // Compare dates by converting to ISO string and checking date portion
+                    const planDateString = new Date(planDate).toISOString().split('T')[0];
+                    const leaveDateString = leaveDate.toISOString().split('T')[0];
+                    return planDateString === leaveDateString;
                 });
+            });
 
-                if (order.selectedPlanDetails.dates.length !== initialLength) {
-                    await order.save();
-                    updatedOrders.push(order);
+            if (relevantLeaveDates.length > 0) {
+                // Filter out dates that are already in the leaves array
+                const newLeaveDates = relevantLeaveDates.filter(
+                    leaveDate => !plan.leaves.some(existingLeave => {
+                        // Compare dates by converting to ISO string and checking date portion
+                        const existingLeaveString = new Date(existingLeave).toISOString().split('T')[0];
+                        const leaveDateString = leaveDate.toISOString().split('T')[0];
+                        return existingLeaveString === leaveDateString;
+                    })
+                );
+
+                if (newLeaveDates.length > 0) {
+                    // Add new leave dates to this plan
+                    plan.leaves.push(...newLeaveDates);
+                    
+                    // Update dynamicDates if it exists
+                    if (plan.dynamicDates && plan.dynamicDates.length > 0) {
+                        newLeaveDates.forEach(leaveDate => {
+                            const leaveDateString = leaveDate.toISOString().split('T')[0];
+                            
+                            plan.dynamicDates.forEach(dynamicDate => {
+                                const dynamicDateString = new Date(dynamicDate.date).toISOString().split('T')[0];
+                                
+                                if (dynamicDateString === leaveDateString) {
+                                    dynamicDate.isLeave = true;
+                                }
+                            });
+                        });
+                    }
+                    
+                    await plan.save();
+                    updatedPlans.push(plan);
+                    
+                    // Now update the corresponding OrderProduct document
+                    const orders = await OrderProduct.find({
+                        customer: customerId,
+                        plan: plan._id,
+                        planisActive: true
+                    });
+                    
+                    for (const order of orders) {
+                        let isOrderUpdated = false;
+                        
+                        // Update the selectedPlanDetails.dates array to mark leave dates
+                        if (order.selectedPlanDetails && order.selectedPlanDetails.dates) {
+                            newLeaveDates.forEach(leaveDate => {
+                                const leaveDateString = leaveDate.toISOString().split('T')[0];
+                                
+                                order.selectedPlanDetails.dates.forEach((dateItem, index) => {
+                                    if (dateItem && dateItem.date) {
+                                        const dateItemString = new Date(dateItem.date).toISOString().split('T')[0];
+                                        
+                                        if (dateItemString === leaveDateString) {
+                                            // Mark this date with "leave" status
+                                            order.selectedPlanDetails.dates[index].status = "leave";
+                                            isOrderUpdated = true;
+                                        }
+                                    }
+                                });
+                            });
+                            
+                            if (isOrderUpdated) {
+                                await order.save();
+                                updatedOrders.push(order);
+                            }
+                        }
+                    }
                 }
             }
         }
 
+        if (updatedPlans.length === 0) {
+            return res.status(400).json({ 
+                message: "No new leaves applied. Either the dates don't exist in any plan or leave is already applied for these dates."
+            });
+        }
+
         res.status(200).json({ 
-            message: `Leave applied successfully. ${updatedPlans.length} plans and ${updatedOrders.length} orders updated.`,
+            message: `Leave applied successfully across ${updatedPlans.length} plans and ${updatedOrders.length} orders`, 
             updatedPlans,
             updatedOrders
         });
-
+        
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
     }
 };
-
-
 //original
 // exports.applyLeave = async (req, res) => {
 //     const { customerId, dates } = req.body; // Expecting an array of dates
