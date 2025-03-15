@@ -617,17 +617,20 @@ exports.getTomorrowOrders = async (req, res) => {
 //     }
 // };
 
-
-//today orders
 exports.getTodayOrders = async (req, res) => {
     try {
         const today = new Date().toISOString().split("T")[0]; // Format YYYY-MM-DD
 
-        // Fetch orders where selectedPlanDetails includes today's date
+        // Fetch orders where selectedPlanDetails includes today's date but exclude 'leave' and 'cancel' statuses
         const orders = await OrderProduct.find({
-            "selectedPlanDetails.dates.date": {
-                $gte: new Date(today),
-                $lt: new Date(`${today}T23:59:59.999Z`)
+            "selectedPlanDetails.dates": {
+                $elemMatch: {
+                    date: {
+                        $gte: new Date(today),
+                        $lt: new Date(`${today}T23:59:59.999Z`)
+                    },
+                    status: { $nin: ["leave", "cancel"] } // Exclude orders with status 'leave' or 'cancel'
+                }
             }
         })
         .populate("customer")
@@ -679,6 +682,68 @@ exports.getTodayOrders = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
+
+//today orders
+// exports.getTodayOrders = async (req, res) => {
+//     try {
+//         const today = new Date().toISOString().split("T")[0]; // Format YYYY-MM-DD
+
+//         // Fetch orders where selectedPlanDetails includes today's date
+//         const orders = await OrderProduct.find({
+//             "selectedPlanDetails.dates.date": {
+//                 $gte: new Date(today),
+//                 $lt: new Date(`${today}T23:59:59.999Z`)
+//             }
+//         })
+//         .populate("customer")
+//         .populate({
+//             path: "productItems.product",
+//             populate: { path: "category" } // Ensure category is populated
+//         });
+
+//         // Group orders by route number
+//         const routeData = {};
+
+//         orders.forEach(order => {
+//             const routeNo = order.customer?.routeno || "Unassigned";
+
+//             if (!routeData[routeNo]) {
+//                 routeData[routeNo] = {};
+//             }
+
+//             order.productItems.forEach(item => {
+//                 const product = item.product;
+//                 const productSize = product?.quantity; // e.g., "100ML"
+//                 const category = product?.category || "Uncategorized"; // Ensure category name exists
+//                 const quantity = item.quantity;
+
+//                 if (productSize) {
+//                     // Initialize category if not exists
+//                     if (!routeData[routeNo][category]) {
+//                         routeData[routeNo][category] = {
+//                             quantities: {},
+//                             totalLiters: 0
+//                         };
+//                     }
+
+//                     // Count quantities per category
+//                     routeData[routeNo][category].quantities[productSize] =
+//                         (routeData[routeNo][category].quantities[productSize] || 0) + quantity;
+
+//                     // Convert to Liters
+//                     const sizeInML = parseInt(productSize.match(/\d+/)[0], 10);
+//                     const totalML = sizeInML * quantity;
+//                     routeData[routeNo][category].totalLiters += totalML / 1000; // Convert ML to Liters
+//                 }
+//             });
+//         });
+
+//         res.json({ success: true, data: routeData });
+//     } catch (error) {
+//         console.error("Error fetching today's orders:", error);
+//         res.status(500).json({ success: false, message: "Server error" });
+//     }
+// };
 
 // Get filtered invoices
 exports.getCustomerInvoices = async (req, res) => {
