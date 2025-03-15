@@ -210,8 +210,7 @@ exports.getPlansByCustomerId = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
-
-async (req, res) => {
+exports.applyLeave = async (req, res) => {
     const { customerId, dates } = req.body; // Expecting an array of dates
 
     try {
