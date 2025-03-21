@@ -184,49 +184,60 @@ exports.deleteAll = asyncHandler(async (req, res) => {
 
 //login admin  and store token and details in local storage
 exports.login = asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
-    try {
+  const { email, password, fcmToken } = req.body; // Include fcmToken in request body
+
+  try {
       const admin = await AdminsModel.findOne({ email: email });
+
       if (!admin) {
-        return res
-          .status(400)
-          .json({ invalid: true, message: "Invalid email or password" });
+          return res.status(400).json({ invalid: true, message: "Invalid email or password" });
       }
+
       if (admin.blocked) {
-        return res.status(403).json({ message: "Your account is blocked" }); 
-    }
-      const isPasswordMatch = await bcrypt.compare(password, admin.password);
-      if (isPasswordMatch) {
-        const adminDetails = {
-          name: admin.name,
-          email: admin.email,
-          _id: admin._id,
-          role: admin.role,
-          phone: admin.phone,
-          image: admin.image,
-          password: password,
-          instagram: admin.instagram,
-          facebook: admin.facebook,
-          twitter: admin.twitter,
-          linkedin: admin.linkedin,
-          youtube: admin.youtube,
-          whatsapp: admin.whatsapp,
-          route: admin.route,
-          address: admin.address
-        };
-        
-        const token = jwt.sign({ email: admin.email, id: admin._id }, "myjwtsecretkey", { expiresIn: "1h" });
-        admin.tokens = token;
-        await admin.save();
-        
-        return res.status(200).json({ token, adminDetails });
-      } else {
-        return res.status(400).json({ invalid: true, message: "Invalid email or password" });
+          return res.status(403).json({ message: "Your account is blocked" }); 
       }
-    } catch (err) {
+
+      const isPasswordMatch = await bcrypt.compare(password, admin.password);
+
+      if (isPasswordMatch) {
+          const token = jwt.sign({ email: admin.email, id: admin._id }, "myjwtsecretkey", { expiresIn: "1h" });
+
+          admin.tokens = token;
+
+          // Update fcmToken if it's missing or different
+          if (!admin.fcmToken || admin.fcmToken !== fcmToken) {
+              admin.fcmToken = fcmToken;
+          }
+
+          await admin.save(); // Save changes to DB
+
+          const adminDetails = {
+              name: admin.name,
+              email: admin.email,
+              _id: admin._id,
+              role: admin.role,
+              phone: admin.phone,
+              image: admin.image,
+              instagram: admin.instagram,
+              facebook: admin.facebook,
+              twitter: admin.twitter,
+              linkedin: admin.linkedin,
+              youtube: admin.youtube,
+              whatsapp: admin.whatsapp,
+              route: admin.route,
+              address: admin.address,
+              fcmToken: admin.fcmToken, // Include updated fcmToken
+          };
+
+          return res.status(200).json({ token, adminDetails });
+      } else {
+          return res.status(400).json({ invalid: true, message: "Invalid email or password" });
+      }
+  } catch (err) {
       return res.status(500).json({ error: "Server error, please try again" });
-    }
+  }
 });
+
 
 
 // Block an admin

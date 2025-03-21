@@ -39,6 +39,9 @@ const adminSchema = new mongoose.Schema({
         type: Boolean,
         default: false  
     },
+    fcmToken: {
+      type: String
+  },
     youtube:String,
     facebook:String,
     twitter:String,
