@@ -852,56 +852,61 @@ exports.updatePayment = async (req, res) => {
 
 
 
-
   exports.confirmCustomer = asyncHandler(async (req, res) => {
-    try {
-        const { customerId } = req.params;
-        console.log(`Processing customer confirmation for ID: ${customerId}`);
-
-        // Find the customer
-        const customer = await CustomerModel.findOne({ customerId });
-        if (!customer) {
-            console.log("Customer not found");
-            return res.status(404).json({ message: "Customer not found" });
-        }
-
-        // Confirm the customer
-        customer.isConfirmed = true;
-        await customer.save();
-        console.log(`Customer ${customerId} confirmed`);
-
-        // Find all admins with the same route
-        const admins = await AdminsModel.find({ 
-            route: customer.routeno, 
-            fcmToken: { $exists: true, $ne: null } 
-        });
-
-        console.log(`Admins found: ${admins.length}`);
-
-        // Extract FCM tokens
-        const fcmTokens = admins.map(admin => admin.fcmToken).filter(token => token);
-        console.log(`FCM Tokens extracted: ${fcmTokens.length}`);
-
-        // Send notification if tokens exist
-        if (fcmTokens.length > 0) {
-            const messages = fcmTokens.map(token => ({
-                notification: {
-                    title: "New Customer Alert",
-                    body: `A new customer (ID: ${customerId}) is confirmed on your route.`,
-                },
-                token
-            }));
-
-            console.log("Sending notifications...");
-            const response = await messaging.sendAll(messages);
-            console.log("Notification Response:", response);
-        }
-
-        res.status(200).json({ message: "Customer confirmed and notification sent." });
-
-    } catch (error) {
-        console.error("Error confirming customer:", error);
-        res.status(500).json({ error: "Server error, please try again" });
+    const { customerId } = req.params;
+    
+    // Find the customer by customerId
+    const customer = await CustomerModel.findOne({ customerId });
+    if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
     }
-});
 
+    // Update the confirmation status
+    customer.isConfirmed = true;
+    await customer.save();
+
+    // If customer has a route number, notify all admins on that route
+    if (customer.routeno) {
+        try {
+            // Find all admins on the same route who have fcmTokens
+            const adminsOnRoute = await AdminsModel.find({
+                route: customer.routeno,  // Matching customer.routeno with admin.route
+                fcmToken: { $exists: true, $ne: "" }
+            });
+
+            if (adminsOnRoute.length > 0) {
+                // Prepare notification message
+                const message = {
+                    notification: {
+                        title: "New Customer Confirmation",
+                        body: `You have a new customer on your route: ${customer.name || customer.customerId}`
+                    },
+                    data: {
+                        customerId: customer.customerId,
+                        routeNumber: customer.routeno,
+                        type: "new_customer_confirmation"
+                    }
+                };
+
+                // Send notifications to all admins on the route
+                for (const admin of adminsOnRoute) {
+                    if (admin.fcmToken) {
+                        await messaging.send({
+                            token: admin.fcmToken,
+                            ...message
+                        }).catch(error => {
+                            console.error(`Failed to send notification to admin ${admin._id}:`, error);
+                        });
+                    }
+                }
+                
+                console.log(`Notifications sent to ${adminsOnRoute.length} admins on route ${customer.routeno}`);
+            }
+        } catch (error) {
+            console.error("Error sending notifications:", error);
+            // Continue with response even if notifications fail
+        }
+    }
+
+    res.status(200).json({ message: "Customer account confirmed successfully." });
+});
