@@ -11,7 +11,8 @@ const Plan = require('../models/plans');
 const admin = require("firebase-admin");
 // Twilio Configuration
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
-
+const messaging = require('../config/firebaseconfig'); // Import Firebase Config
+const AdminsModel = require('../models/admins');
 // Temporary storage for OTPs (Use Redis for better scalability)
 const otpStorage = new Map();
 
@@ -527,21 +528,21 @@ exports.deleteCustomerAddress = async (req, res) => {
 };
 
 
-exports.confirmCustomer = asyncHandler(async (req, res) => {
-    const { customerId } = req.params;
+// exports.confirmCustomer = asyncHandler(async (req, res) => {
+//     const { customerId } = req.params;
     
-    // Find the customer by customerId
-    const customer = await CustomerModel.findOne({ customerId });
-    if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
-    }
+//     // Find the customer by customerId
+//     const customer = await CustomerModel.findOne({ customerId });
+//     if (!customer) {
+//         return res.status(404).json({ message: "Customer not found" });
+//     }
 
-    // Update the confirmation status
-    customer.isConfirmed = true;
-    await customer.save();
+//     // Update the confirmation status
+//     customer.isConfirmed = true;
+//     await customer.save();
 
-    res.status(200).json({ message: "Customer account confirmed successfully." });
-});
+//     res.status(200).json({ message: "Customer account confirmed successfully." });
+// });
 
 
 //proof image add
@@ -848,3 +849,49 @@ exports.updatePayment = async (req, res) => {
       });
     }
   };
+
+
+
+
+
+
+exports.confirmCustomer = asyncHandler(async (req, res) => {
+    try {
+        const { customerId } = req.params;
+
+        // Find the customer
+        const customer = await CustomerModel.findOne({ customerId });
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        // Confirm the customer
+        customer.isConfirmed = true;
+        await customer.save();
+
+        // Find all admins with the same route
+        const admins = await AdminsModel.find({ route: customer.routeno, fcmToken: { $exists: true, $ne: null } });
+
+        // Extract FCM tokens
+        const fcmTokens = admins.map(admin => admin.fcmToken).filter(token => token);
+
+        // Send notification if tokens exist
+        if (fcmTokens.length > 0) {
+            const message = {
+                notification: {
+                    title: "New Customer Alert",
+                    body: "You have a new customer on your route."
+                },
+                tokens: fcmTokens // Send notification to multiple admins
+            };
+
+            await messaging.sendMulticast(message);
+        }
+
+        res.status(200).json({ message: "Customer confirmed and notification sent." });
+
+    } catch (error) {
+        console.error("Error confirming customer:", error);
+        res.status(500).json({ error: "Server error, please try again" });
+    }
+});
