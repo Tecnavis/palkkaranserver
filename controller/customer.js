@@ -13,7 +13,6 @@ const admin = require("firebase-admin");
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 const messaging = require('../config/firebaseconfig'); // Import Firebase Config
 const AdminsModel = require('../models/admins');
-// Temporary storage for OTPs (Use Redis for better scalability)
 const otpStorage = new Map();
 
 exports.login = asyncHandler(async (req, res) => {
@@ -877,15 +876,15 @@ exports.confirmCustomer = asyncHandler(async (req, res) => {
 
         // Send notification if tokens exist
         if (fcmTokens.length > 0) {
-            const message = {
+            const messages = fcmTokens.map(token => ({
                 notification: {
                     title: "New Customer Alert",
                     body: "You have a new customer on your route."
                 },
-                tokens: fcmTokens // Send notification to multiple admins
-            };
-
-            await messaging.sendMulticast(message);
+                token
+            }));
+            
+            await messaging.sendAll(messages);            
         }
 
         res.status(200).json({ message: "Customer confirmed and notification sent." });
