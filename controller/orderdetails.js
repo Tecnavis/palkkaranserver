@@ -217,7 +217,7 @@ exports.updateDateStatusToCancel = async (req, res) => {
 exports.getAllOrders = async (req, res) => {
     try {
         const orders = await OrderProduct.find()
-            .populate("customer", "name email phone address routeno customerId customerindex") // Populate customer details
+            .populate("customer", "name email phone address routeno customerId customerindex paidAmounts") // Populate customer details
             .populate({
                 path: "productItems.product", // Populate product details for each product item
                 select: "name price description productId title category coverimage quantity", // Select specific fields from the Product model
