@@ -853,38 +853,48 @@ exports.updatePayment = async (req, res) => {
 
 
 
-
-exports.confirmCustomer = asyncHandler(async (req, res) => {
+  exports.confirmCustomer = asyncHandler(async (req, res) => {
     try {
         const { customerId } = req.params;
+        console.log(`Processing customer confirmation for ID: ${customerId}`);
 
         // Find the customer
         const customer = await CustomerModel.findOne({ customerId });
         if (!customer) {
+            console.log("Customer not found");
             return res.status(404).json({ message: "Customer not found" });
         }
 
         // Confirm the customer
         customer.isConfirmed = true;
         await customer.save();
+        console.log(`Customer ${customerId} confirmed`);
 
         // Find all admins with the same route
-        const admins = await AdminsModel.find({ route: customer.routeno, fcmToken: { $exists: true, $ne: null } });
+        const admins = await AdminsModel.find({ 
+            route: customer.routeno, 
+            fcmToken: { $exists: true, $ne: null } 
+        });
+
+        console.log(`Admins found: ${admins.length}`);
 
         // Extract FCM tokens
         const fcmTokens = admins.map(admin => admin.fcmToken).filter(token => token);
+        console.log(`FCM Tokens extracted: ${fcmTokens.length}`);
 
         // Send notification if tokens exist
         if (fcmTokens.length > 0) {
             const messages = fcmTokens.map(token => ({
                 notification: {
                     title: "New Customer Alert",
-                    body: "You have a new customer on your route."
+                    body: `A new customer (ID: ${customerId}) is confirmed on your route.`,
                 },
                 token
             }));
-            
-            await messaging.sendAll(messages);            
+
+            console.log("Sending notifications...");
+            const response = await messaging.sendAll(messages);
+            console.log("Notification Response:", response);
         }
 
         res.status(200).json({ message: "Customer confirmed and notification sent." });
@@ -894,3 +904,4 @@ exports.confirmCustomer = asyncHandler(async (req, res) => {
         res.status(500).json({ error: "Server error, please try again" });
     }
 });
+
