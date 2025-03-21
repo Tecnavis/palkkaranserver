@@ -21,7 +21,7 @@
 const cron = require("node-cron");
 const OrderProduct = require("../models/orderdetails");
 const { sendMonthlyInvoice } = require("../controller/orderdetails");
-
+const Notification = require("../models/notification");
 const getLastMonthRange = () => {
     const today = new Date();
     const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -52,6 +52,22 @@ cron.schedule("0 0 1 * *", async () => {
         
     } catch (error) {
         console.error("Error in sending invoices:", error.message);
+    }
+});
+
+
+
+
+// Runs every midnight to delete read notifications older than 7 days
+cron.schedule("0 0 * * *", async () => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    try {
+        await Notification.deleteMany({ read: true, createdAt: { $lte: sevenDaysAgo } });
+        console.log("Deleted old read notifications.");
+    } catch (error) {
+        console.error("Error deleting old notifications:", error);
     }
 });
 

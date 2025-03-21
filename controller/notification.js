@@ -17,7 +17,16 @@ exports.create = async (req, res) => {
 exports.getNotificationByCustomerId = async (req, res) => {
     try {
         const { customerId } = req.params;
+
+        // Update all unread notifications to read: true
+        await Notification.updateMany(
+            { customerId, read: false }, 
+            { $set: { read: true } }
+        );
+
+        // Fetch updated notifications
         const notifications = await Notification.find({ customerId });
+
         res.status(200).json({ notifications });
     } catch (error) {
         console.error("Error fetching notifications:", error);
