@@ -1800,7 +1800,6 @@ exports.changePlan = async (req, res) => {
 
             case "custom":
                 if (!customDates || !Array.isArray(customDates)) {
-                    console.log("Invalid custom dates");
                     return res.status(400).json({ message: "Invalid custom dates" });
                 }
                 newDates = customDates.map(date => {
@@ -1827,7 +1826,6 @@ exports.changePlan = async (req, res) => {
 
             case "alternative":
                 if (!interval || typeof interval !== "number") {
-                    console.log("Invalid interval for alternative plan");
                     return res.status(400).json({ message: "Invalid interval for alternative plan" });
                 }
                 newDates = Array.from({ length: 15 }, (_, i) => {
