@@ -102,7 +102,16 @@ exports.update = async (req, res) => {
 };
 exports.delete = async (req, res) => {
     try {
-        const route = await Route.findByIdAndDelete(req.params.id);
+    
+      const { id, productId } = req.params;
+
+
+      const route = await Route.findByIdAndUpdate(
+          id,
+          { $pull: { products: { productId: productId } } }, 
+          { new: true } 
+      );
+        
         if (!route) {
             return res.status(404).json({ message: "Route not found" });
         }
@@ -114,6 +123,7 @@ exports.delete = async (req, res) => {
 
 exports.deleteAll = async (req, res) => {
     try {
+      
         await Route.deleteMany({});
         res.status(200).json({ message: "All routes deleted successfully" });
     } catch (error) {

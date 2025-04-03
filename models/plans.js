@@ -8,7 +8,7 @@ const planSchema = new mongoose.Schema({
     },
     planType: {
         type: String,
-        enum: ["daily", "custom", "weekly", "alternative", "monthly","none"],
+        enum: ["daily", "custom", "weekly", "alternative", "monthly","introductory","none"],
 
         required: false
     },

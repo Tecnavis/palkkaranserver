@@ -746,6 +746,72 @@ exports.getTodayOrders = async (req, res) => {
 // };
 
 // Get filtered invoices
+// exports.getCustomerInvoices = async (req, res) => {
+//     try {
+//         const { customerId } = req.params;
+
+//         // Fetch orders for the given customer
+//         const orders = await OrderProduct.find({ customer: customerId })
+//             .populate("customer", "name email phone customerId paidAmounts")
+//             .populate("productItems.product", "category")
+//             .populate("plan") 
+//             .lean();
+
+
+//             console.log(orders, "order");
+            
+
+            
+            
+//         if (!orders.length) {
+//             return res.status(404).json({ message: "No invoices found for this customer" });
+//         }
+
+//         const formattedResponse = orders.map(order => {
+//             let totalAmount = 0;
+
+//             const orderItems = order.selectedPlanDetails?.dates
+//                 .filter(dateItem => dateItem.status === "delivered")
+//                 .map((dateItem, index) => ({
+//                     no: index + 1,
+//                     date: dateItem.date,
+//                     status: dateItem.status,
+//                     products: order.productItems.map(item => {
+//                         const subtotal = item.quantity * item.routePrice;
+//                         totalAmount += subtotal; // Accumulate the total amount
+//                         return {
+//                             product: item.product?.category || "N/A",
+//                             quantity: item.quantity,
+//                             routePrice: item.routePrice,
+//                             subtotal: subtotal,
+//                         };
+//                     }),
+//                 }));
+                
+//                 return {
+//                     customer: order.customer,
+//                     invoiceDetails: {
+//                         invoiceNo: order._id,
+//                         paymentType: order.paymentMethod,
+//                         paymentStatus: order.paymentStatus,
+//                     },
+//                     orderItems: orderItems,
+//                 total: totalAmount, // Corrected total amount
+//                 paidAmount: 0, // Default paid amount
+//             };
+//         });
+//         console.log(formattedResponse, "oir");
+
+//         res.json(formattedResponse);
+//     } catch (error) {
+//         console.error("Error fetching invoice details:", error);
+//         res.status(500).json({ message: "Internal Server Error" });
+//     }
+// };
+
+
+
+
 exports.getCustomerInvoices = async (req, res) => {
     try {
         const { customerId } = req.params;
@@ -754,6 +820,7 @@ exports.getCustomerInvoices = async (req, res) => {
         const orders = await OrderProduct.find({ customer: customerId })
             .populate("customer", "name email phone customerId paidAmounts")
             .populate("productItems.product", "category")
+            .populate("plan")
             .lean();
 
         if (!orders.length) {
@@ -761,7 +828,8 @@ exports.getCustomerInvoices = async (req, res) => {
         }
 
         const formattedResponse = orders.map(order => {
-            let totalAmount = 0;
+            let totalAmount = 0; // Initialize total amount here
+            let remainingDiscount = 3; // Only deduct a total of 3, not per item
 
             const orderItems = order.selectedPlanDetails?.dates
                 .filter(dateItem => dateItem.status === "delivered")
@@ -770,11 +838,22 @@ exports.getCustomerInvoices = async (req, res) => {
                     date: dateItem.date,
                     status: dateItem.status,
                     products: order.productItems.map(item => {
-                        const subtotal = item.quantity * item.routePrice;
-                        totalAmount += subtotal; // Accumulate the total amount
+                        let adjustedQuantity = item.quantity;
+
+                        // Apply discount only if planType is "introductory" AND remainingDiscount is available
+                        if (order.selectedPlanDetails?.planType === "introductory" && remainingDiscount > 0) {
+                            const deduction = Math.min(adjustedQuantity, remainingDiscount);
+                            adjustedQuantity -= deduction;
+                            remainingDiscount -= deduction;
+                        }
+
+
+                        const subtotal = adjustedQuantity * item.routePrice;
+                        totalAmount += subtotal; // Accumulate total amount correctly
+
                         return {
                             product: item.product?.category || "N/A",
-                            quantity: item.quantity,
+                            quantity: adjustedQuantity, // Adjusted quantity
                             routePrice: item.routePrice,
                             subtotal: subtotal,
                         };
@@ -789,8 +868,8 @@ exports.getCustomerInvoices = async (req, res) => {
                     paymentStatus: order.paymentStatus,
                 },
                 orderItems: orderItems,
-                total: totalAmount, // Corrected total amount
-                paidAmount: 0, // Default paid amount
+                total: totalAmount, // Ensure the correct total is returned
+                paidAmount: order.paidamount || 0, // Set the actual paid amount
             };
         });
 
@@ -800,6 +879,7 @@ exports.getCustomerInvoices = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 };
+
 
 // Example Endpoints
 // Daily Plan: { "orderId": "ORDER_ID", "newPlanType": "daily" }
@@ -1517,53 +1597,215 @@ exports.updateDateStatus = async (req, res) => {
 
 
 
+// exports.changePlan = async (req, res) => {
+//     const { orderId, newPlanType, customDates, weeklyDays, interval, startDate } = req.body;
+
+    
+
+//     try {
+//         const order = await OrderProduct.findById(orderId);
+//         if (!order) {
+//             return res.status(404).json({ message: "Order not found" });
+//         }
+
+//         // Retain only previous dates before the change
+//         const previousDates = order.selectedPlanDetails.dates
+//             .filter(d => new Date(d.date) < new Date())
+//             .map(d => ({
+//                 date: new Date(d.date).setUTCHours(0, 0, 0, 0), // Normalize date
+//                 status: d.status,
+//             }));
+
+//         let newDates = [];
+//         const now = new Date();
+//         const today = new Date();
+//         today.setUTCHours(0, 0, 0, 0); // Normalize today
+
+//         console.log(newDates, "newdate");
+        
+        
+//         // Determine the start date
+//         let start = new Date();
+//         if (now.getHours() >= 6) {
+//             start.setDate(start.getDate() + 1); // Move to next day if after 6 AM
+//         }
+//         start.setUTCHours(0, 0, 0, 0); // Normalize start date
+
+//         switch (newPlanType) {
+//             case "daily":
+//             case "monthly":
+//                 newDates = Array.from({ length: 30 }, (_, i) => {
+//                     let date = new Date(start);
+//                     date.setDate(start.getDate() + i);
+//                     date.setUTCHours(0, 0, 0, 0); // Normalize
+//                     return date;
+//                 });
+//                 break;
+
+//             case "custom":
+//                 if (!customDates || !Array.isArray(customDates)) {
+//                     return res.status(400).json({ message: "Invalid custom dates" });
+//                 }
+//                 newDates = customDates.map(date => {
+//                     let d = new Date(date);
+//                     d.setUTCHours(0, 0, 0, 0); // Normalize
+//                     return d;
+//                 });
+//                 break;
+
+//             case "weekly":
+//                 if (!weeklyDays || !Array.isArray(weeklyDays)) {
+//                     return res.status(400).json({ message: "Invalid weekly days" });
+//                 }
+//                 newDates = weeklyDays.map(day => {
+//                     const offset = (day - start.getDay() + 7) % 7;
+//                     let nextDay = new Date(start);
+//                     nextDay.setDate(start.getDate() + offset);
+//                     nextDay.setUTCHours(0, 0, 0, 0); // Normalize
+//                     return nextDay;
+//                 });
+//                 break;
+
+//             case "alternative":
+//                 if (!startDate || !interval || typeof interval !== "number") {
+//                     return res.status(400).json({ message: "Invalid alternative plan details" });
+//                 }
+//                 const altStartDate = new Date(startDate);
+//                 altStartDate.setUTCHours(0, 0, 0, 0);
+                
+//                 // Adjust altStartDate if order is changed after 6 AM
+//                 if (now.getHours() >= 6) {
+//                     altStartDate.setDate(altStartDate.getDate() + 1);
+//                 }
+                
+//                 newDates = Array.from({ length: 15 }, (_, i) => {
+//                     let nextDate = new Date(altStartDate);
+//                     nextDate.setDate(altStartDate.getDate() + i * interval);
+//                     nextDate.setUTCHours(0, 0, 0, 0); // Normalize
+//                     return nextDate;
+//                 });
+//                 break;
+//             case "introductory":
+//                     if (!startDate) {
+//                         return res.status(400).json({ message: "Start date required for Introductory Plan" });
+//                     }
+                
+//                     const introStartDate = new Date(startDate);
+//                     introStartDate.setUTCHours(0, 0, 0, 0);
+                
+//                     // Calculate the full 10-day delivery period
+//                     newDates = Array.from({ length: 10 }, (_, i) => {
+//                         let nextDate = new Date(introStartDate);
+//                         nextDate.setDate(introStartDate.getDate() + i);
+//                         nextDate.setUTCHours(0, 0, 0, 0);
+//                         return nextDate;
+//                     });
+                
+//                     // Store a separate array for invoice dates (only 7 days)
+//                     const invoiceDates = newDates.slice(0, 7);
+                
+//                     break;
+                
+
+//             default:
+//                 return res.status(400).json({ message: "Invalid plan type" });
+//         }
+
+//         // Remove duplicate dates
+//         const uniqueDates = new Map();
+        
+//         // Add previous dates to the map
+//         previousDates.forEach(({ date, status }) => {
+//             uniqueDates.set(date, { date: new Date(date), status });
+//         });
+
+//         // Add new dates to the map if not already present
+//         newDates.forEach(date => {
+//             if (!uniqueDates.has(date.getTime())) {
+//                 uniqueDates.set(date.getTime(), { date, status: "pending" });
+//             }
+//         });
+
+//         // Convert map back to an array
+//         order.selectedPlanDetails.planType = newPlanType;
+//         order.selectedPlanDetails.dates = Array.from(uniqueDates.values());
+//         order.selectedPlanDetails.isActive = true;
+
+//         await order.save();
+//         console.log(JSON.stringify(order.selectedPlanDetails.dates, null, 2));
+        
+//         res.status(200).json({ message: "Plan updated successfully", order });
+
+//         // Send notification
+//         const user = await User.findById(order.customer); // Assuming 'customer' is the user ID
+        
+//         if (user && user.fcmToken) {
+//             const message = {
+//                 token: user.fcmToken,
+//                 notification: {
+//                     title: "Changed Plan",
+//                     body: "Your plan has been changed.",
+//                 },
+//             };
+//             await messaging.send(message);
+//         }
+
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: "Internal server error" });
+//     }
+// };
+
+
 exports.changePlan = async (req, res) => {
     const { orderId, newPlanType, customDates, weeklyDays, interval, startDate } = req.body;
+
 
     try {
         const order = await OrderProduct.findById(orderId);
         if (!order) {
+           
             return res.status(404).json({ message: "Order not found" });
         }
 
-        // Retain only previous dates before the change
+
+        // Retain only previous dates before today
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
         const previousDates = order.selectedPlanDetails.dates
-            .filter(d => new Date(d.date) < new Date())
+            .filter(d => new Date(d.date) < today)
             .map(d => ({
-                date: new Date(d.date).setUTCHours(0, 0, 0, 0), // Normalize date
+                date: new Date(d.date).setUTCHours(0, 0, 0, 0),
                 status: d.status,
             }));
 
+
         let newDates = [];
-        const now = new Date();
-        const today = new Date();
-        today.setUTCHours(0, 0, 0, 0); // Normalize today
-        
-        // Determine the start date
-        let start = new Date();
-        if (now.getHours() >= 6) {
-            start.setDate(start.getDate() + 1); // Move to next day if after 6 AM
-        }
-        start.setUTCHours(0, 0, 0, 0); // Normalize start date
+        let planStartDate = startDate ? new Date(startDate) : new Date();
+
+        planStartDate.setUTCHours(0, 0, 0, 0);
+        if (planStartDate < today) planStartDate = today; // Ensure start date is today or later
 
         switch (newPlanType) {
             case "daily":
             case "monthly":
                 newDates = Array.from({ length: 30 }, (_, i) => {
-                    let date = new Date(start);
-                    date.setDate(start.getDate() + i);
-                    date.setUTCHours(0, 0, 0, 0); // Normalize
+                    let date = new Date(planStartDate);
+                    date.setDate(planStartDate.getDate() + i);
+                    date.setUTCHours(0, 0, 0, 0);
                     return date;
                 });
                 break;
 
             case "custom":
                 if (!customDates || !Array.isArray(customDates)) {
+                    console.log("Invalid custom dates");
                     return res.status(400).json({ message: "Invalid custom dates" });
                 }
                 newDates = customDates.map(date => {
                     let d = new Date(date);
-                    d.setUTCHours(0, 0, 0, 0); // Normalize
+                    d.setUTCHours(0, 0, 0, 0);
                     return d;
                 });
                 break;
@@ -1572,31 +1814,35 @@ exports.changePlan = async (req, res) => {
                 if (!weeklyDays || !Array.isArray(weeklyDays)) {
                     return res.status(400).json({ message: "Invalid weekly days" });
                 }
-                newDates = weeklyDays.map(day => {
-                    const offset = (day - start.getDay() + 7) % 7;
-                    let nextDay = new Date(start);
-                    nextDay.setDate(start.getDate() + offset);
-                    nextDay.setUTCHours(0, 0, 0, 0); // Normalize
-                    return nextDay;
-                });
+                for (let i = 0; i < 4; i++) { // Generate dates for 4 weeks
+                    weeklyDays.forEach(day => {
+                        let nextDate = new Date(planStartDate);
+                        let offset = (day - nextDate.getDay() + 7) % 7;
+                        nextDate.setDate(nextDate.getDate() + offset + i * 7);
+                        nextDate.setUTCHours(0, 0, 0, 0);
+                        newDates.push(nextDate);
+                    });
+                }
                 break;
 
             case "alternative":
-                if (!startDate || !interval || typeof interval !== "number") {
-                    return res.status(400).json({ message: "Invalid alternative plan details" });
+                if (!interval || typeof interval !== "number") {
+                    console.log("Invalid interval for alternative plan");
+                    return res.status(400).json({ message: "Invalid interval for alternative plan" });
                 }
-                const altStartDate = new Date(startDate);
-                altStartDate.setUTCHours(0, 0, 0, 0);
-                
-                // Adjust altStartDate if order is changed after 6 AM
-                if (now.getHours() >= 6) {
-                    altStartDate.setDate(altStartDate.getDate() + 1);
-                }
-                
                 newDates = Array.from({ length: 15 }, (_, i) => {
-                    let nextDate = new Date(altStartDate);
-                    nextDate.setDate(altStartDate.getDate() + i * interval);
-                    nextDate.setUTCHours(0, 0, 0, 0); // Normalize
+                    let nextDate = new Date(planStartDate);
+                    nextDate.setDate(planStartDate.getDate() + i * interval);
+                    nextDate.setUTCHours(0, 0, 0, 0);
+                    return nextDate;
+                });
+                break;
+
+            case "introductory":
+                newDates = Array.from({ length: 10 }, (_, i) => {
+                    let nextDate = new Date(planStartDate);
+                    nextDate.setDate(planStartDate.getDate() + i);
+                    nextDate.setUTCHours(0, 0, 0, 0);
                     return nextDate;
                 });
                 break;
@@ -1605,45 +1851,41 @@ exports.changePlan = async (req, res) => {
                 return res.status(400).json({ message: "Invalid plan type" });
         }
 
+
         // Remove duplicate dates
         const uniqueDates = new Map();
         
-        // Add previous dates to the map
         previousDates.forEach(({ date, status }) => {
             uniqueDates.set(date, { date: new Date(date), status });
         });
 
-        // Add new dates to the map if not already present
         newDates.forEach(date => {
             if (!uniqueDates.has(date.getTime())) {
                 uniqueDates.set(date.getTime(), { date, status: "pending" });
             }
         });
 
-        // Convert map back to an array
+        // Update order details
         order.selectedPlanDetails.planType = newPlanType;
-        order.selectedPlanDetails.dates = Array.from(uniqueDates.values());
+        order.selectedPlanDetails.dates = Array.from(uniqueDates.values()).sort((a, b) => a.date - b.date);
         order.selectedPlanDetails.isActive = true;
+
 
         await order.save();
         res.status(200).json({ message: "Plan updated successfully", order });
 
-        // Send notification
-        const user = await User.findById(order.customer); // Assuming 'customer' is the user ID
-        
-        if (user && user.fcmToken) {
-            const message = {
+        // Send notification if applicable
+        const user = await User.findById(order.customer);
+        if (user?.fcmToken) {
+            await messaging.send({
                 token: user.fcmToken,
                 notification: {
                     title: "Changed Plan",
                     body: "Your plan has been changed.",
                 },
-            };
-            await messaging.send(message);
+            });
         }
-
     } catch (error) {
-        console.error(error);
         res.status(500).json({ message: "Internal server error" });
     }
 };
