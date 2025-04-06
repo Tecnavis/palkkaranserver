@@ -64,8 +64,14 @@ const customerSchema = new mongoose.Schema({
     },
     fcmToken: {
         type: String
+    },
+    referralId: { type: String, unique: true },
+    referredBy: { type: String, default: null }, 
+    referralRewarded: { type: Boolean, default: false },
+    point:{
+      type: Number,
+      default: 0
     }
-    
 });
 
 // Pre-save hook to hash passwords

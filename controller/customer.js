@@ -183,23 +183,109 @@ const generateCustomerId = async () => {
     return `CS${baseId}`;
 };
 
+// exports.create = asyncHandler(async (req, res) => {
+//     let { name, password, phone, location, address, routeno, routename, email,fcmToken } = req.body;
+
+//     // Validate phone number
+//     if (!phone) {
+//         return res.status(400).json({ message: "Phone number is required" });
+//     }
+
+//     // Remove any existing +91 prefix and whitespace
+//     phone = phone.replace(/^\+91\s*/, '').replace(/\s/g, '');
+
+//     // Validate phone number is exactly 10 digits
+//     if (!/^\d{10}$/.test(phone)) {
+//         return res.status(400).json({ message: "Phone number must be exactly 10 digits" });
+//     }
+
+//     // Add +91 prefix
+//     const formattedPhone = '+91 ' + phone;
+
+//     if (!password) {
+//         return res.status(400).json({ message: "Please add all required fields" });
+//     }
+
+//     // Validate and parse address
+//     let parsedAddress = [];
+//     if (address) {
+//         try {
+//             parsedAddress = JSON.parse(address);
+//             if (!Array.isArray(parsedAddress)) {
+//                 throw new Error("Address must be an array of objects");
+//             }
+//         } catch (err) {
+//             return res.status(400).json({ message: "Invalid address format. Address must be an array of objects." });
+//         }
+//     }
+
+//     // Check if customer already exists
+//     const customerExists = await CustomerModel.findOne({ phone: formattedPhone });
+//     if (customerExists) {
+//         return res.status(400).json({ message: "Phone number already exists" });
+//     }
+
+//     // Generate a new customerId
+//     const customerId = await generateCustomerId();
+
+//     // Create the new customer
+//     const customer = await CustomerModel.create({
+//         customerId,
+//         name,
+//         password,
+//         phone: formattedPhone,
+//         location,
+//         address: parsedAddress,
+//         routeno,
+//         routename,
+//         email,
+//         fcmToken
+
+//     });
+
+//     if (customer) {
+//         res.status(201).json({
+//             _id: customer._id,
+//             customerId: customer.customerId,
+//             name: customer.name,
+//             phone: customer.phone,
+//             location: customer.location,
+//             address: customer.address,
+//             routeno: customer.routeno,
+//             routename: customer.routename,
+//             email: customer.email,
+//             fcmToken: customer.fcmToken,
+//             message: "Customer created successfully. Please confirm your account to be able to login."
+//         });
+//     } else {
+//         res.status(400).json({ message: "Invalid customer data" });
+//     }
+// });
+
+// Helper: Generate unique referral ID
+function generateReferralId(length = 8) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < length; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `REF-${code}`;
+}
+
 exports.create = asyncHandler(async (req, res) => {
-    let { name, password, phone, location, address, routeno, routename, email,fcmToken } = req.body;
+    let { name, password, phone, location, address, routeno, routename, email, fcmToken, referredBy } = req.body;
 
     // Validate phone number
     if (!phone) {
         return res.status(400).json({ message: "Phone number is required" });
     }
 
-    // Remove any existing +91 prefix and whitespace
     phone = phone.replace(/^\+91\s*/, '').replace(/\s/g, '');
 
-    // Validate phone number is exactly 10 digits
     if (!/^\d{10}$/.test(phone)) {
         return res.status(400).json({ message: "Phone number must be exactly 10 digits" });
     }
 
-    // Add +91 prefix
     const formattedPhone = '+91 ' + phone;
 
     if (!password) {
@@ -226,7 +312,25 @@ exports.create = asyncHandler(async (req, res) => {
     }
 
     // Generate a new customerId
-    const customerId = await generateCustomerId();
+    const customerId = await generateCustomerId(); // Make sure you have this function
+
+    // Generate a unique referralId
+    let referralId;
+    let isUnique = false;
+    while (!isUnique) {
+        referralId = generateReferralId();
+        const existing = await CustomerModel.findOne({ referralId });
+        if (!existing) isUnique = true;
+    }
+
+    // Validate referredBy if provided
+    let validReferrer = null;
+    if (referredBy) {
+        validReferrer = await CustomerModel.findOne({ referralId: referredBy });
+        if (!validReferrer) {
+            return res.status(400).json({ message: "Invalid referral ID provided." });
+        }
+    }
 
     // Create the new customer
     const customer = await CustomerModel.create({
@@ -239,9 +343,19 @@ exports.create = asyncHandler(async (req, res) => {
         routeno,
         routename,
         email,
-        fcmToken
-
+        fcmToken,
+        referralId,
+        referredBy: validReferrer ? validReferrer.referralId : null
     });
+
+
+    // change not allow
+        customer.isConfirmed = true;
+
+        await customer.save();
+
+        // not
+
 
     if (customer) {
         res.status(201).json({
@@ -255,6 +369,8 @@ exports.create = asyncHandler(async (req, res) => {
             routename: customer.routename,
             email: customer.email,
             fcmToken: customer.fcmToken,
+            referralId: customer.referralId,
+            referredBy: customer.referredBy,
             message: "Customer created successfully. Please confirm your account to be able to login."
         });
     } else {
@@ -266,7 +382,7 @@ exports.create = asyncHandler(async (req, res) => {
 
 
 exports.getAll = asyncHandler(async (req, res) => {
-    const customer = await CustomerModel.find();
+    const customer = await CustomerModel.find();  
     res.status(200).json(customer);
 })
 
@@ -852,59 +968,125 @@ exports.updatePayment = async (req, res) => {
 
 
 
-  exports.confirmCustomer = asyncHandler(async (req, res) => {
-    const { customerId } = req.params;
+//   exports.confirmCustomer = asyncHandler(async (req, res) => {
+//     const { customerId } = req.params;
     
+//     // Find the customer by customerId
+//     const customer = await CustomerModel.findOne({ customerId });
+//     if (!customer) {
+//         return res.status(404).json({ message: "Customer not found" });
+//     }
+
+//     // Update the confirmation status
+//     customer.isConfirmed = true;
+//     await customer.save();
+
+//     // If customer has a route number, notify all admins on that route
+//     if (customer.routeno) {
+//         try {
+//             // Find all admins on the same route who have fcmTokens
+//             const adminsOnRoute = await AdminsModel.find({
+//                 route: customer.routeno,  // Matching customer.routeno with admin.route
+//                 fcmToken: { $exists: true, $ne: "" }
+//             });
+
+//             if (adminsOnRoute.length > 0) {
+//                 // Prepare notification message
+//                 const message = {
+//                     notification: {
+//                         title: "New Customer Confirmation",
+//                         body: `You have a new customer on your route: ${customer.name || customer.customerId}`
+//                     },
+//                     data: {
+//                         customerId: customer.customerId,
+//                         routeNumber: customer.routeno,
+//                         type: "new_customer_confirmation"
+//                     }
+//                 };
+
+//                 // Send notifications to all admins on the route
+//                 for (const admin of adminsOnRoute) {
+//                     if (admin.fcmToken) {
+//                         await messaging.send({
+//                             token: admin.fcmToken,
+//                             ...message
+//                         }).catch(error => {
+//                             console.error(`Failed to send notification to admin ${admin._id}:`, error);
+//                         });
+//                     }
+//                 }
+                
+//                 console.log(`Notifications sent to ${adminsOnRoute.length} admins on route ${customer.routeno}`);
+//             }
+//         } catch (error) {
+//             console.error("Error sending notifications:", error);
+//             // Continue with response even if notifications fail
+//         }
+//     }
+
+//     res.status(200).json({ message: "Customer account confirmed successfully." });
+// });
+
+
+
+exports.confirmCustomer = asyncHandler(async (req, res) => {
+    const { customerId } = req.params;
+
     // Find the customer by customerId
     const customer = await CustomerModel.findOne({ customerId });
     if (!customer) {
         return res.status(404).json({ message: "Customer not found" });
     }
 
-    // Update the confirmation status
+    // ✅ Mark customer as confirmed
     customer.isConfirmed = true;
+    
+
+    // ✅ Reward referring customer (only once)
+    if (customer.referredBy && !customer.referralRewarded) {
+        const referrer = await CustomerModel.findOne({ referralId: customer.referredBy });
+        if (referrer) {
+            referrer.point += 5;
+            await referrer.save();
+            customer.point += 5;
+            customer.referralRewarded = true; // mark referral as rewarded
+        }
+    }
+
     await customer.save();
 
-    // If customer has a route number, notify all admins on that route
+    // ✅ Notify route admins
     if (customer.routeno) {
         try {
-            // Find all admins on the same route who have fcmTokens
-            const adminsOnRoute = await AdminsModel.find({
-                route: customer.routeno,  // Matching customer.routeno with admin.route
+            const admins = await AdminsModel.find({
+                route: customer.routeno,
                 fcmToken: { $exists: true, $ne: "" }
             });
 
-            if (adminsOnRoute.length > 0) {
-                // Prepare notification message
-                const message = {
-                    notification: {
-                        title: "New Customer Confirmation",
-                        body: `You have a new customer on your route: ${customer.name || customer.customerId}`
-                    },
-                    data: {
-                        customerId: customer.customerId,
-                        routeNumber: customer.routeno,
-                        type: "new_customer_confirmation"
-                    }
-                };
-
-                // Send notifications to all admins on the route
-                for (const admin of adminsOnRoute) {
-                    if (admin.fcmToken) {
-                        await messaging.send({
-                            token: admin.fcmToken,
-                            ...message
-                        }).catch(error => {
-                            console.error(`Failed to send notification to admin ${admin._id}:`, error);
-                        });
-                    }
+            const message = {
+                notification: {
+                    title: "New Customer Confirmation",
+                    body: `You have a new customer on your route: ${customer.name || customer.customerId}`
+                },
+                data: {
+                    customerId: customer.customerId,
+                    routeNumber: customer.routeno,
+                    type: "new_customer_confirmation"
                 }
-                
-                console.log(`Notifications sent to ${adminsOnRoute.length} admins on route ${customer.routeno}`);
+            };
+
+            for (const admin of admins) {
+                if (admin.fcmToken) {
+                    await messaging.send({
+                        token: admin.fcmToken,
+                        ...message
+                    }).catch(error => {
+                        console.error(`Failed to send to admin ${admin._id}:`, error);
+                    });
+                }
             }
         } catch (error) {
-            console.error("Error sending notifications:", error);
-            // Continue with response even if notifications fail
+            console.error("Error notifying admins:", error);
         }
     }
 

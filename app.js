@@ -22,6 +22,7 @@ var orderdetails = require('./routes/orderdetails');
 var review = require('./routes/review');
 var banner = require('./routes/banner');
 var route = require('./routes/route');
+var rewarditem = require('./routes/rewarditem');
 var notification = require('./routes/notification');
 // Connect to database
 connectDB();
@@ -43,6 +44,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+
 // View engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -62,6 +64,7 @@ app.use('/orderdetails',orderdetails)
 app.use('/review',review)
 app.use('/banner',banner)
 app.use('/route',route)
+app.use('/rewarditem', rewarditem)
 app.use('/notification',notification)
 // 404 handler - This should come after all valid routes
 app.use((req, res, next) => {
