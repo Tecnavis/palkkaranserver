@@ -24,6 +24,7 @@ var banner = require('./routes/banner');
 var route = require('./routes/route');
 var rewarditem = require('./routes/rewarditem');
 var notification = require('./routes/notification');
+const rewardRoutes = require("./routes/reward");
 // Connect to database
 connectDB();
 
@@ -66,6 +67,7 @@ app.use('/banner',banner)
 app.use('/route',route)
 app.use('/rewarditem', rewarditem)
 app.use('/notification',notification)
+app.use("/rewards", rewardRoutes);
 // 404 handler - This should come after all valid routes
 app.use((req, res, next) => {
   res.status(404).json({

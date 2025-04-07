@@ -27,8 +27,6 @@ const createRewardItem = async (req, res) => {
 const getAllRewardItems = async (req, res) => {
   try {
 
-    
-
     const items = await Rewarditem.find().populate("category");
     res.status(200).json(items);
   } catch (err) {
@@ -41,7 +39,7 @@ const getAllRewardItems = async (req, res) => {
 const getASpecificRewards = async (req, res) => {
   try {
     const { routeno } = req.params;
-    console.log("Param:", routeno);
+
 
     // Get all reward items with populated category
     const allItems = await Rewarditem.find().populate("category");
