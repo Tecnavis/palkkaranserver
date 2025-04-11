@@ -27,7 +27,7 @@ const createRewardItem = async (req, res) => {
 const getAllRewardItems = async (req, res) => {
   try {
 
-    const items = await Rewarditem.find().populate("category");
+    const items = await Rewarditem.find({isDelete: false}).populate("category");
     res.status(200).json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -42,7 +42,7 @@ const getASpecificRewards = async (req, res) => {
 
 
     // Get all reward items with populated category
-    const allItems = await Rewarditem.find().populate("category");
+    const allItems = await Rewarditem.find({isDelete: false}).populate("category");
 
     // Filter those where the populated category name matches the param
     const filteredItems = allItems.filter(item => 
@@ -60,8 +60,11 @@ const getASpecificRewards = async (req, res) => {
 // Get a single reward item by ID
 const getRewardItemById = async (req, res) => {
   try {
-    const item = await Rewarditem.findById(req.params.id).populate("categories");
-    if (!item) {
+    const item = await Rewarditem.findOne({
+      _id: req.params.id,
+      isDelete: false,
+    }).populate("categories");
+      if (!item) {
       return res.status(404).json({ error: "Reward item not found" });
     }
     res.status(200).json(item);
@@ -109,7 +112,11 @@ const updateRewardItem = async (req, res) => {
 // Delete a reward item by ID
 const deleteRewardItem = async (req, res) => {
   try {
-    const deletedItem = await Rewarditem.findByIdAndDelete(req.params.id);
+    const deletedItem =await Rewarditem.findByIdAndUpdate(
+      req.params.id,
+      { isDelete: true },
+      { new: true }
+    );
     if (!deletedItem) {
       return res.status(404).json({ error: "Reward item not found" });
     }

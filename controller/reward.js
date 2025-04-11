@@ -32,7 +32,11 @@ exports.createReward = async (req, res) => {
         // Final item: reduce points, delete reward item
         findACustomer.point -= findAReward.points;
         await findACustomer.save();
-        await Rewarditem.findByIdAndDelete(rewardItem);
+        await Rewarditem.findByIdAndUpdate(
+          rewardItem,
+          { isDelete: true },
+          { new: true }
+        );
       } else {
         return res.status(400).json({ error: "Out of stock" });
       }
