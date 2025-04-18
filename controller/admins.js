@@ -11,8 +11,8 @@ require('dotenv').config();
 const transporter = nodemailer.createTransport({
     service: 'gmail', 
     auth: {
-        user: process.env.EMAIL,
-        pass: process.env.PASSWORD
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
 });
 
@@ -31,7 +31,7 @@ exports.forgotPassword = async (req, res) => {
         admin.resetTokenExpires = Date.now() + 3600000; // 1 hour
         await admin.save();
         await transporter.sendMail({
-            from: 'your-email@gmail.com',
+            from:process.env.EMAIL_USER,
             to: admin.email,
             subject: 'Your OTP for password reset',
             text: `Your OTP is ${otp}`
