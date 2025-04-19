@@ -9,6 +9,9 @@ const User = require("../models/customer");
 const mongoose = require("mongoose");
 require("dotenv").config();
 const admin = require("firebase-admin");
+const AdminsModel = require("../models/admins");
+const Notification = require("../models/notification");
+
 // Create an order
 exports.createOrder = async (req, res) => {
   try {
@@ -323,7 +326,7 @@ exports.delete = async (req, res) => {
 
   try {
     // Check if the order exists
-    const order = await OrderProduct.findById(id);
+    const order = await OrderProduct.findById(id).populate("customer");
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
@@ -335,6 +338,18 @@ exports.delete = async (req, res) => {
 
     // Delete the order
     await OrderProduct.findByIdAndDelete(id);
+
+      // notification 
+    
+      const deliveryBoy = await AdminsModel.findOne({ route: order?.customer?.routeno });
+    
+      const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) plan deleted`;
+  
+      const notification = new Notification({
+        deliveryboyId: deliveryBoy._id,
+        message,
+      });
+      await notification.save();
 
     res
       .status(200)
@@ -417,7 +432,10 @@ exports.stopPlan = async (req, res) => {
   today.setHours(0, 0, 0, 0); // Ensure only date comparison
 
   try {
-    const order = await OrderProduct.findById(orderId);
+    const order = await OrderProduct.findById(orderId).populate("customer");
+
+    console.log(order, "hoioi");
+    
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
@@ -437,6 +455,19 @@ exports.stopPlan = async (req, res) => {
     );
 
     await order.save();
+
+    // notification 
+
+        const deliveryBoy = await AdminsModel.findOne({ route: order?.customer?.routeno });
+    
+        const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) plan stoped`;
+    
+        const notification = new Notification({
+          deliveryboyId: deliveryBoy._id,
+          message,
+        });
+        await notification.save();
+    
 
     res.status(200).json({ message: "Plan stopped successfully", order });
   } catch (error) {
@@ -1997,7 +2028,8 @@ exports.changePlan = async (req, res) => {
     req.body;
 
   try {
-    const order = await OrderProduct.findById(orderId);
+    const order = await OrderProduct.findById(orderId).populate("customer");
+    
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
@@ -2105,6 +2137,19 @@ exports.changePlan = async (req, res) => {
     order.selectedPlanDetails.isActive = true;
 
     await order.save();
+
+//  notification creating
+       const  deliveryBoy = await  AdminsModel.findOne({route:  order?.customer?.routeno })
+    
+       const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) updated their order.`;
+    
+               const notification = new Notification({ 
+                deliveryboyId: deliveryBoy._id,
+                 message 
+               });
+               await notification.save();
+       
+
     res.status(200).json({ message: "Plan updated successfully", order });
 
     // Send notification if applicable

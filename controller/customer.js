@@ -59,7 +59,7 @@ exports.login = asyncHandler(async (req, res) => {
 });
 
 exports.verifyOtp = asyncHandler(async (req, res) => {
-  const { phone, otp, fcmToken, referredBy } = req.body;
+  const { phone, otp, fcmToken } = req.body;
 
   // Check if OTP is valid
   const storedOtp = otpStorage.get(phone);
@@ -76,20 +76,6 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Customer not found" });
   }
 
-  // Validate referredBy if provided
-  let validReferrer = null;
-  if (referredBy) {
-    validReferrer = await CustomerModel.findOne({ referralId: referredBy });
-    if (!validReferrer) {
-      return res.status(400).json({ message: "Invalid referral ID provided." });
-    }
-  }
-
-  // Update the referredBy field of the existing customer
-  customer.referredBy = validReferrer ? validReferrer.referralId : null;
-
-  // Save the updated customer
-  await customer.save();
 
   // Update or create FCM token
   if (fcmToken && customer.fcmToken !== fcmToken) {

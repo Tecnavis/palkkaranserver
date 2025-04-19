@@ -22,7 +22,7 @@ router.get("/selected-plan/:customerId", orderController.getSelectedPlanByCustom
 // Get product items by customer ID
 router.get("/product-items/:customerId", orderController.getProductItemsByCustomer);
 router.put("/stop-plan/:orderId", orderController.stopPlan);
-router.put("/changeplan", orderController.changePlan)
+router.put("/changeplan", orderController.changePlan) 
 router.post("/send-invoice",orderController.sendInvoiceEmail);
 router.get("/orders/:routeNo", orderController.getOrdersByRoute);
 //tomorrow orders

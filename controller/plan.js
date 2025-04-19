@@ -1,5 +1,7 @@
 const Plan = require("../models/plans");
 const Customer = require("../models/customer");
+const AdminsModel = require("../models/admins");
+const Notification = require("../models/notification");
 
 const OrderProduct = require("../models/orderdetails");
 // Utility function to calculate 30 days from the current date
@@ -122,6 +124,19 @@ exports.createPlan = async (req, res) => {
     });
 
     await newPlan.save();
+
+    //  notification creating
+
+    const deliveryBoy = await AdminsModel.findOne({ route: customer.routeno });
+
+    const message = `🛒 ${customer.name} (Route ${customer.routeno}) placed a new order.`;
+
+    const notification = new Notification({
+      deliveryboyId: deliveryBoy._id,
+      message,
+    });
+    await notification.save();
+
     res
       .status(201)
       .json({ message: "Plan created successfully", plan: newPlan });
@@ -337,6 +352,22 @@ exports.applyLeave = async (req, res) => {
           "No new leaves applied. Either the dates don't exist in any plan or leave is already applied for these dates.",
       });
     }
+    // notification
+
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    const deliveryBoy = await AdminsModel.findOne({ route: customer.routeno });
+
+    const message = `🛒 ${customer.name} (Route ${customer.routeno}) applied for leave — affecting ${updatedPlans.length} plans and ${updatedOrders.length} orders.`;
+
+    const notification = new Notification({
+      deliveryboyId: deliveryBoy._id,
+      message,
+    });
+    await notification.save();
 
     res.status(200).json({
       message: `Leave applied successfully across ${updatedPlans.length} plans and ${updatedOrders.length} orders`,

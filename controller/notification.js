@@ -33,3 +33,25 @@ exports.getNotificationByCustomerId = async (req, res) => {
         res.status(500).json({ error: "Failed to fetch notifications." });
     }
 };
+
+
+//getNotificationByDeliveryboyId
+exports.getNotificationByDeliveryboyId = async (req, res) => {
+    try {
+        const { deliveryboyId } = req.params;
+
+        // Update all unread notifications to read: true
+        await Notification.updateMany(
+            { deliveryboyId, read: false }, 
+            { $set: { read: true } }
+        );
+
+        // Fetch updated notifications
+        const notifications = await Notification.find({ deliveryboyId });
+
+        res.status(200).json({ notifications });
+    } catch (error) {
+        console.error("Error fetching notifications:", error);
+        res.status(500).json({ error: "Failed to fetch notifications." });
+    }
+};

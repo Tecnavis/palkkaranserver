@@ -5,5 +5,8 @@ const controller = require('../controller/notification')
 router.post('/',controller.create)
 //get by customer id
 router.get('/:customerId',controller.getNotificationByCustomerId)
+//get by delvery boy id
+router.get('/:deliveryboyId',controller.getNotificationByDeliveryboyId)
+
 
 module.exports = router;

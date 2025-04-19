@@ -3,8 +3,11 @@ const mongoose = require("mongoose");
 const notificationSchema = new mongoose.Schema({
     customerId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Customer",
-        required: true
+        ref: "Customer"
+    },
+    deliveryboyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Admin"
     },
     message: {
         type: String,
