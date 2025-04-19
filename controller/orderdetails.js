@@ -433,9 +433,7 @@ exports.stopPlan = async (req, res) => {
 
   try {
     const order = await OrderProduct.findById(orderId).populate("customer");
-
-    console.log(order, "hoioi");
-    
+   
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
