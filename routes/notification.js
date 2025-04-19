@@ -6,7 +6,7 @@ router.post('/',controller.create)
 //get by customer id
 router.get('/:customerId',controller.getNotificationByCustomerId)
 //get by delvery boy id
-router.get('/:deliveryboyId',controller.getNotificationByDeliveryboyId)
+router.get('/delivery/:deliveryboyId',controller.getNotificationByDeliveryboyId)
 
 
 module.exports = router;

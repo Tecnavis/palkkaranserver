@@ -39,7 +39,7 @@ exports.getNotificationByCustomerId = async (req, res) => {
 exports.getNotificationByDeliveryboyId = async (req, res) => {
     try {
         const { deliveryboyId } = req.params;
-
+        
         // Update all unread notifications to read: true
         await Notification.updateMany(
             { deliveryboyId, read: false }, 
