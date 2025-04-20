@@ -36,6 +36,18 @@ const calculateDailyDates = (start) => {
   return dates;
 };
 
+const calculateIntroductoryDates = (start) => {
+  const startDate = new Date(start);
+  const dates = [];
+  for (let i = 0; i < 10; i++) {
+    const newDate = new Date(startDate);
+    newDate.setDate(startDate.getDate() + i);
+    dates.push(newDate);
+  }
+  return dates;
+};
+
+
 // Create a new plan for a customer
 exports.createPlan = async (req, res) => {
   const { customerId, planType, customDates, weeklyDays, startDate, interval } =
@@ -109,6 +121,11 @@ exports.createPlan = async (req, res) => {
       case "monthly":
         dates = calculateMonthlyDates(startDate);
         break;
+
+        case "introductory":
+          dates = calculateIntroductoryDates(startDate);
+          break;
+        
       case "none":
         dates.push(startDate);
         break;
