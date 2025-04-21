@@ -2036,18 +2036,63 @@ exports.changePlan = async (req, res) => {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
+    
     const previousDates = order.selectedPlanDetails.dates
-      .filter((d) => new Date(d.date) < today)
-      .map((d) => ({
-        date: new Date(d.date).setUTCHours(0, 0, 0, 0),
-        status: d.status,
-      }));
-
+    .filter((d) => new Date(d.date) < today)
+    .map((d) => ({
+      date: new Date(d.date).setUTCHours(0, 0, 0, 0),
+      status: d.status,
+    }));
+    
     let newDates = [];
-    let planStartDate = startDate ? new Date(startDate) : new Date();
+  //   let planStartDate = startDate ? new Date(startDate) : new Date();
+    
+    
+  //   planStartDate.setUTCHours(0, 0, 0, 0);
+  //   console.log(planStartDate, "hooo");
+  //   console.log(today, "today");
+    
+  //   const now = new Date();
+  //  const timeString = now.toLocaleTimeString(); // Local timezone
+  //  console.log(timeString); // e.g., "10:42:30 AM"
 
-    planStartDate.setUTCHours(0, 0, 0, 0);
-    if (planStartDate < today) planStartDate = today; // Ensure start date is today or later
+
+  //   if (planStartDate == today && timeString >  "3:42:30 AM" ) planStartDate = today + 1; // Ensure start date is today or later
+
+
+  let planStartDate = startDate ? new Date(startDate) : new Date();
+
+const now = new Date();
+
+
+// Set planStartDate to 00:00 UTC
+planStartDate.setUTCHours(0, 0, 0, 0);
+
+// Convert current local time to 24-hour format
+const currentHour = now.getHours();
+const currentMinute = now.getMinutes();
+const currentSecond = now.getSeconds();
+
+// Target time = 3:42:30 AM
+const targetHour = 3;
+const targetMinute = 42;
+const targetSecond = 30;
+
+// Compare current time with 3:42:30 AM
+const isAfterTargetTime =
+  currentHour > targetHour ||
+  (currentHour === targetHour && currentMinute > targetMinute) ||
+  (currentHour === targetHour &&
+    currentMinute === targetMinute &&
+    currentSecond > targetSecond);
+
+// If plan start is today AND current time is after 3:42 AM, move to tomorrow
+if (planStartDate.getTime() === today.getTime() && isAfterTargetTime) {
+  planStartDate = new Date(today);
+  planStartDate.setDate(today.getDate() + 1); // move to tomorrow
+}
+
+
 
     switch (newPlanType) {
       case "daily":
@@ -2165,3 +2210,5 @@ exports.changePlan = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+

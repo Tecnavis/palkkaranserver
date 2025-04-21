@@ -54,15 +54,55 @@ exports.createPlan = async (req, res) => {
     req.body;
 
   try {
+
+
+
     const customer = await Customer.findById(customerId);
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
 
+
+    let planStartDate = startDate ? new Date(startDate) : new Date();
+
+const now = new Date();
+
+// Convert to today's date at 00:00 UTC
+const today = new Date();
+today.setUTCHours(0, 0, 0, 0);
+
+// Set planStartDate to 00:00 UTC
+planStartDate.setUTCHours(0, 0, 0, 0);
+
+// Convert current local time to 24-hour format
+const currentHour = now.getHours();
+const currentMinute = now.getMinutes();
+const currentSecond = now.getSeconds();
+
+// Target time = 3:42:30 AM
+const targetHour = 3;
+const targetMinute = 42;
+const targetSecond = 30;
+
+// Compare current time with 3:42:30 AM
+const isAfterTargetTime =
+  currentHour > targetHour ||
+  (currentHour === targetHour && currentMinute > targetMinute) ||
+  (currentHour === targetHour &&
+    currentMinute === targetMinute &&
+    currentSecond > targetSecond);
+
+// If plan start is today AND current time is after 3:42 AM, move to tomorrow
+if (planStartDate.getTime() === today.getTime() && isAfterTargetTime) {
+  planStartDate = new Date(today);
+  planStartDate.setDate(today.getDate() + 1); // move to tomorrow
+}
+
+
     let dates = [];
     switch (planType) {
       case "daily":
-        dates = calculateDailyDates(startDate); // Generate 90 days for daily plan
+        dates = calculateDailyDates(planStartDate ); // Generate 90 days for daily plan
         break;
 
       case "custom":
@@ -77,11 +117,11 @@ exports.createPlan = async (req, res) => {
           return res.status(400).json({ message: "Invalid weekly days" });
         }
 
-        const startDates = new Date(startDate);
+        const startDates = new Date(planStartDate);
         const daysToGenerate = 90; // Generate for 90 days
 
         for (let day of weeklyDays) {
-          let currentDate = new Date(startDates);
+          let currentDate = new Date(planStartDate);
           let offset = (day - currentDate.getDay() + 7) % 7;
           currentDate.setDate(currentDate.getDate() + offset); // Move to the correct weekday
 
@@ -105,7 +145,7 @@ exports.createPlan = async (req, res) => {
             .json({ message: "Invalid alternative plan details" });
         }
 
-        let altStartDate = new Date(startDate);
+        let altStartDate = new Date(planStartDate);
         if (altStartDate.getHours() >= 6) {
           altStartDate.setDate(altStartDate.getDate() + 1);
         }
@@ -119,15 +159,15 @@ exports.createPlan = async (req, res) => {
         break;
 
       case "monthly":
-        dates = calculateMonthlyDates(startDate);
+        dates = calculateMonthlyDates(planStartDate);
         break;
 
         case "introductory":
-          dates = calculateIntroductoryDates(startDate);
+          dates = calculateIntroductoryDates(planStartDate);
           break;
         
       case "none":
-        dates.push(startDate);
+        dates.push(planStartDate);
         break;
 
       default:
