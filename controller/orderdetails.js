@@ -550,74 +550,78 @@ exports.getOrdersByRoute = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
-exports.getTomorrowOrders = async (req, res) => {
-  try {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowDateStr = tomorrow.toISOString().split("T")[0]; // Format YYYY-MM-DD
 
-    // Fetch orders where selectedPlanDetails includes tomorrow's date but excludes "leave" or "cancel" status
-    const orders = await OrderProduct.find({
-      "selectedPlanDetails.dates": {
-        $elemMatch: {
-          date: {
-            $gte: new Date(tomorrowDateStr),
-            $lt: new Date(`${tomorrowDateStr}T23:59:59.999Z`),
-          },
-          status: { $nin: ["leave", "cancel"] }, // Exclude orders with leave or cancel status
-        },
-      },
-    })
-      .populate("customer")
-      .populate({
-        path: "productItems.product",
-        populate: { path: "category" }, // Ensure category is populated
-      });
+// exports.getTomorrowOrders = async (req, res) => {
+//   try {
+//     const tomorrow = new Date();
+//     tomorrow.setDate(tomorrow.getDate() + 1);
+//     const tomorrowDateStr = tomorrow.toISOString().split("T")[0]; // Format YYYY-MM-DD
 
-    // Group orders by route number
-    const routeData = {};
+//     // Fetch orders where selectedPlanDetails includes tomorrow's date but excludes "leave" or "cancel" status
+//     const orders = await OrderProduct.find({
+//       "selectedPlanDetails.dates": {
+//         $elemMatch: {
+//           date: {
+//             $gte: new Date(tomorrowDateStr),
+//             $lt: new Date(`${tomorrowDateStr}T23:59:59.999Z`),
+//           },
+//           status: { $nin: ["leave", "cancel"] }, // Exclude orders with leave or cancel status
+//         },
+//       },
+//     })
+//       .populate("customer")
+//       .populate({
+//         path: "productItems.product",
+//         populate: { path: "category" }, // Ensure category is populated
+//       });
 
-    orders.forEach((order) => {
-      const routeNo = order.customer?.routeno || "Unassigned";
+//     // Group orders by route number
+//     const routeData = {};
 
-      if (!routeData[routeNo]) {
-        routeData[routeNo] = {};
-      }
+//     orders.forEach((order) => {
+//       const routeNo = order.customer?.routeno || "Unassigned";
 
-      order.productItems.forEach((item) => {
-        const product = item.product;
-        const productSize = product?.quantity; // e.g., "100ML"
-        const category = product?.category || "Uncategorized"; // Ensure category name exists
-        const quantity = item.quantity;
+//       if (!routeData[routeNo]) {
+//         routeData[routeNo] = {};
+//       }
 
-        if (productSize) {
-          // Initialize category if not exists
-          if (!routeData[routeNo][category]) {
-            routeData[routeNo][category] = {
-              quantities: {},
-              totalLiters: 0,
-            };
-          }
+//       order.productItems.forEach((item) => {
+//         const product = item.product;
+//         const productSize = product?.quantity; // e.g., "100ML"
+//         const category = product?.category || "Uncategorized"; // Ensure category name exists
+//         const quantity = item.quantity;
 
-          // Count quantities per category
-          routeData[routeNo][category].quantities[productSize] =
-            (routeData[routeNo][category].quantities[productSize] || 0) +
-            quantity;
+//         if (productSize) {
+//           // Initialize category if not exists
+//           if (!routeData[routeNo][category]) {
+//             routeData[routeNo][category] = {
+//               quantities: {},
+//               totalLiters: 0,
+//             };
+//           }
 
-          // Convert to Liters
-          const sizeInML = parseInt(productSize.match(/\d+/)[0], 10);
-          const totalML = sizeInML * quantity;
-          routeData[routeNo][category].totalLiters += totalML / 1000; // Convert ML to Liters
-        }
-      });
-    });
+//           // Count quantities per category
+//           routeData[routeNo][category].quantities[productSize] =
+//             (routeData[routeNo][category].quantities[productSize] || 0) +
+//             quantity;
 
-    res.json({ success: true, data: routeData });
-  } catch (error) {
-    console.error("Error fetching tomorrow's orders:", error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
+//           // Convert to Liters
+//           const sizeInML = parseInt(productSize.match(/\d+/)[0], 10);
+//           const totalML = sizeInML * quantity;
+//           routeData[routeNo][category].totalLiters += totalML / 1000; // Convert ML to Liters
+//         }
+//       });
+//     });
+
+//     res.json({ success: true, data: routeData });
+//   } catch (error) {
+//     console.error("Error fetching tomorrow's orders:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
+
+
 
 //tomorrow orders
 // exports.getTomorrowOrders = async (req, res) => {
@@ -683,26 +687,170 @@ exports.getTomorrowOrders = async (req, res) => {
 //     }
 // };
 
-exports.getTodayOrders = async (req, res) => {
-  try {
-    const today = new Date().toISOString().split("T")[0]; // Format YYYY-MM-DD
+// exports.getTodayOrders = async (req, res) => {
+//   try {
+//     const today = new Date().toISOString().split("T")[0]; // Format YYYY-MM-DD
 
-    // Fetch orders where selectedPlanDetails includes today's date but exclude 'leave' and 'cancel' statuses
+//     // Fetch orders where selectedPlanDetails includes today's date but exclude 'leave' and 'cancel' statuses
+//     const orders = await OrderProduct.find({
+//       "selectedPlanDetails.dates": {
+//         $elemMatch: {
+//           date: {
+//             $gte: new Date(today),
+//             $lt: new Date(`${today}T23:59:59.999Z`),
+//           },
+//           status: { $nin: ["leave", "cancel"] }, // Exclude orders with status 'leave' or 'cancel'
+//         },
+//       },
+//     })
+//       .populate("customer")
+//       .populate({
+//         path: "productItems.product",
+//         populate: { path: "category" }, // Ensure category is populated
+//       });
+
+//     // Group orders by route number
+//     const routeData = {};
+
+//     orders.forEach((order) => {
+//       const routeNo = order.customer?.routeno || "Unassigned";
+
+//       if (!routeData[routeNo]) {
+//         routeData[routeNo] = {};
+//       }
+
+//       order.productItems.forEach((item) => {
+//         const product = item.product;
+//         const productSize = product?.quantity; // e.g., "100ML"
+//         const category = product?.category || "Uncategorized"; // Ensure category name exists
+//         const quantity = item.quantity;
+
+//         if (productSize) {
+//           // Initialize category if not exists
+//           if (!routeData[routeNo][category]) {
+//             routeData[routeNo][category] = {
+//               quantities: {},
+//               totalLiters: 0,
+//             };
+//           }
+
+//           // Count quantities per category
+//           routeData[routeNo][category].quantities[productSize] =
+//             (routeData[routeNo][category].quantities[productSize] || 0) +
+//             quantity;
+
+//           // Convert to Liters
+//           const sizeInML = parseInt(productSize.match(/\d+/)[0], 10);
+//           const totalML = sizeInML * quantity;
+//           routeData[routeNo][category].totalLiters += totalML / 1000; // Convert ML to Liters
+//         }
+//       });
+//     });
+
+//     res.json({ success: true, data: routeData });
+//   } catch (error) {
+//     console.error("Error fetching today's orders:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
+
+exports.getTomorrowOrders = async (req, res) => {
+  try {
+    // Get start of tomorrow
+    const startOfTomorrow = new Date();
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+    startOfTomorrow.setHours(0, 0, 0, 0);
+
+    // Get end of tomorrow
+    const endOfTomorrow = new Date(startOfTomorrow);
+    endOfTomorrow.setHours(23, 59, 59, 999);
+
     const orders = await OrderProduct.find({
       "selectedPlanDetails.dates": {
         $elemMatch: {
           date: {
-            $gte: new Date(today),
-            $lt: new Date(`${today}T23:59:59.999Z`),
+            $gte: startOfTomorrow,
+            $lt: endOfTomorrow,
           },
-          status: { $nin: ["leave", "cancel"] }, // Exclude orders with status 'leave' or 'cancel'
+          status: { $nin: ["leave", "cancel"] },
         },
       },
     })
       .populate("customer")
       .populate({
         path: "productItems.product",
-        populate: { path: "category" }, // Ensure category is populated
+        populate: { path: "category" },
+      });
+
+    const routeData = {};
+
+    orders.forEach((order) => {
+      const routeNo = order.customer?.routeno || "Unassigned";
+
+      if (!routeData[routeNo]) {
+        routeData[routeNo] = {};
+      }
+
+      order.productItems.forEach((item) => {
+        const product = item.product;
+        const productSize = product?.quantity || "Unknown";
+        const category = product?.category || "Uncategorized";
+        const quantity = item.quantity || 0;
+
+        if (!routeData[routeNo][category]) {
+          routeData[routeNo][category] = {
+            quantities: {},
+            totalLiters: 0,
+          };
+        }
+
+        routeData[routeNo][category].quantities[productSize] =
+          (routeData[routeNo][category].quantities[productSize] || 0) + quantity;
+
+        // Convert to liters (safe parsing)
+        const match = productSize.match(/\d+/);
+        if (match) {
+          const sizeInML = parseInt(match[0], 10);
+          const totalML = sizeInML * quantity;
+          routeData[routeNo][category].totalLiters += totalML / 1000;
+        }
+      });
+    });
+
+    res.json({ success: true, data: routeData });
+  } catch (error) {
+    console.error("Error fetching tomorrow's orders:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+exports.getTodayOrders = async (req, res) => {
+  try {
+    // Get today's date range in local time
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    // Fetch orders where selectedPlanDetails.dates contains today's date and valid status
+    const orders = await OrderProduct.find({
+      "selectedPlanDetails.dates": {
+        $elemMatch: {
+          date: {
+            $gte: startOfToday,
+            $lt: endOfToday,
+          },
+          status: { $nin: ["leave", "cancel"] },
+        },
+      },
+    })
+      .populate("customer")
+      .populate({
+        path: "productItems.product",
+        populate: { path: "category" },
       });
 
     // Group orders by route number
@@ -717,28 +865,27 @@ exports.getTodayOrders = async (req, res) => {
 
       order.productItems.forEach((item) => {
         const product = item.product;
-        const productSize = product?.quantity; // e.g., "100ML"
-        const category = product?.category || "Uncategorized"; // Ensure category name exists
-        const quantity = item.quantity;
+        const productSize = product?.quantity || "Unknown"; // e.g., "100ML"
+        const category = product?.category || "Uncategorized"; // Ensure category name
+        const quantity = item.quantity || 0;
 
-        if (productSize) {
-          // Initialize category if not exists
-          if (!routeData[routeNo][category]) {
-            routeData[routeNo][category] = {
-              quantities: {},
-              totalLiters: 0,
-            };
-          }
+        if (!routeData[routeNo][category]) {
+          routeData[routeNo][category] = {
+            quantities: {},
+            totalLiters: 0,
+          };
+        }
 
-          // Count quantities per category
-          routeData[routeNo][category].quantities[productSize] =
-            (routeData[routeNo][category].quantities[productSize] || 0) +
-            quantity;
+        // Count quantities by size
+        routeData[routeNo][category].quantities[productSize] =
+          (routeData[routeNo][category].quantities[productSize] || 0) + quantity;
 
-          // Convert to Liters
-          const sizeInML = parseInt(productSize.match(/\d+/)[0], 10);
+        // Convert to liters if numeric value found
+        const match = productSize.match(/\d+/);
+        if (match) {
+          const sizeInML = parseInt(match[0], 10);
           const totalML = sizeInML * quantity;
-          routeData[routeNo][category].totalLiters += totalML / 1000; // Convert ML to Liters
+          routeData[routeNo][category].totalLiters += totalML / 1000;
         }
       });
     });
@@ -749,6 +896,80 @@ exports.getTodayOrders = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
+
+// exports.getTodayOrders = async (req, res) => {
+//   try {
+//     // Get today's date range in local time
+//     const startOfToday = new Date();
+//     startOfToday.setHours(0, 0, 0, 0);
+
+//     const endOfToday = new Date();
+//     endOfToday.setHours(23, 59, 59, 999);
+
+//     // Fetch orders where selectedPlanDetails.dates contains today's date and valid status
+//     const orders = await OrderProduct.find({
+//       "selectedPlanDetails.dates": {
+//         $elemMatch: {
+//           date: {
+//             $gte: startOfToday,
+//             $lt: endOfToday,
+//           },
+//           status: { $nin: ["leave", "cancel"] },
+//         },
+//       },
+//     })
+//       .populate("customer")
+//       .populate({
+//         path: "productItems.product",
+//         populate: { path: "category" },
+//       });
+
+//     // Group orders by route number
+//     const routeData = {};
+
+//     orders.forEach((order) => {
+//       const routeNo = order.customer?.routeno || "Unassigned";
+
+//       if (!routeData[routeNo]) {
+//         routeData[routeNo] = {};
+//       }
+
+//       order.productItems.forEach((item) => {
+//         const product = item.product;
+//         const productSize = product?.quantity || "Unknown"; // e.g., "100ML"
+//         const category = product?.category?.name || "Uncategorized"; // Ensure category name
+//         const quantity = item.quantity || 0;
+
+//         if (!routeData[routeNo][category]) {
+//           routeData[routeNo][category] = {
+//             quantities: {},
+//             totalLiters: 0,
+//           };
+//         }
+
+//         // Count quantities by size
+//         routeData[routeNo][category].quantities[productSize] =
+//           (routeData[routeNo][category].quantities[productSize] || 0) + quantity;
+
+//         // Convert to liters if numeric value found
+//         const match = productSize.match(/\d+/);
+//         if (match) {
+//           const sizeInML = parseInt(match[0], 10);
+//           const totalML = sizeInML * quantity;
+//           routeData[routeNo][category].totalLiters += totalML / 1000;
+//         }
+//       });
+//     });
+
+//     res.json({ success: true, data: routeData });
+//   } catch (error) {
+//     console.error("Error fetching today's orders:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
 
 //today orders
 // exports.getTodayOrders = async (req, res) => {

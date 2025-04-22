@@ -47,62 +47,56 @@ const calculateIntroductoryDates = (start) => {
   return dates;
 };
 
-
 // Create a new plan for a customer
 exports.createPlan = async (req, res) => {
   const { customerId, planType, customDates, weeklyDays, startDate, interval } =
     req.body;
 
   try {
-
-
-
     const customer = await Customer.findById(customerId);
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
 
-
     let planStartDate = startDate ? new Date(startDate) : new Date();
 
-const now = new Date();
+    const now = new Date();
 
-// Convert to today's date at 00:00 UTC
-const today = new Date();
-today.setUTCHours(0, 0, 0, 0);
+    // Convert to today's date at 00:00 UTC
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
 
-// Set planStartDate to 00:00 UTC
-planStartDate.setUTCHours(0, 0, 0, 0);
+    // Set planStartDate to 00:00 UTC
+    planStartDate.setUTCHours(0, 0, 0, 0);
 
-// Convert current local time to 24-hour format
-const currentHour = now.getHours();
-const currentMinute = now.getMinutes();
-const currentSecond = now.getSeconds();
+    // Convert current local time to 24-hour format
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentSecond = now.getSeconds();
 
-// Target time = 3:42:30 AM
-const targetHour = 3;
-const targetMinute = 42;
-const targetSecond = 30;
+    // Target time = 3:42:30 AM
+    const targetHour = 3;
+    const targetMinute = 42;
+    const targetSecond = 30;
 
-// Compare current time with 3:42:30 AM
-const isAfterTargetTime =
-  currentHour > targetHour ||
-  (currentHour === targetHour && currentMinute > targetMinute) ||
-  (currentHour === targetHour &&
-    currentMinute === targetMinute &&
-    currentSecond > targetSecond);
+    // Compare current time with 3:42:30 AM
+    const isAfterTargetTime =
+      currentHour > targetHour ||
+      (currentHour === targetHour && currentMinute > targetMinute) ||
+      (currentHour === targetHour &&
+        currentMinute === targetMinute &&
+        currentSecond > targetSecond);
 
-// If plan start is today AND current time is after 3:42 AM, move to tomorrow
-if (planStartDate.getTime() === today.getTime() && isAfterTargetTime) {
-  planStartDate = new Date(today);
-  planStartDate.setDate(today.getDate() + 1); // move to tomorrow
-}
-
+    // If plan start is today AND current time is after 3:42 AM, move to tomorrow
+    if (planStartDate.getTime() === today.getTime() && isAfterTargetTime) {
+      planStartDate = new Date(today);
+      planStartDate.setDate(today.getDate() + 1); // move to tomorrow
+    }
 
     let dates = [];
     switch (planType) {
       case "daily":
-        dates = calculateDailyDates(planStartDate ); // Generate 90 days for daily plan
+        dates = calculateDailyDates(planStartDate); // Generate 90 days for daily plan
         break;
 
       case "custom":
@@ -162,10 +156,10 @@ if (planStartDate.getTime() === today.getTime() && isAfterTargetTime) {
         dates = calculateMonthlyDates(planStartDate);
         break;
 
-        case "introductory":
-          dates = calculateIntroductoryDates(planStartDate);
-          break;
-        
+      case "introductory":
+        dates = calculateIntroductoryDates(planStartDate);
+        break;
+
       case "none":
         dates.push(planStartDate);
         break;
