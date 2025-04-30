@@ -339,17 +339,19 @@ exports.delete = async (req, res) => {
     // Delete the order
     await OrderProduct.findByIdAndDelete(id);
 
-      // notification 
-    
-      const deliveryBoy = await AdminsModel.findOne({ route: order?.customer?.routeno });
-    
-      const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) plan deleted`;
-  
-      const notification = new Notification({
-        deliveryboyId: deliveryBoy._id,
-        message,
-      });
-      await notification.save();
+    // notification
+
+    const deliveryBoy = await AdminsModel.findOne({
+      route: order?.customer?.routeno,
+    });
+
+    const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) plan deleted`;
+
+    const notification = new Notification({
+      deliveryboyId: deliveryBoy._id,
+      message,
+    });
+    await notification.save();
 
     res
       .status(200)
@@ -388,12 +390,10 @@ exports.getSelectedPlanByCustomer = asyncHandler(async (req, res) => {
 
     res.status(200).json(orders);
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Error fetching selected plan details",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Error fetching selected plan details",
+      error: error.message,
+    });
   }
 });
 
@@ -433,7 +433,7 @@ exports.stopPlan = async (req, res) => {
 
   try {
     const order = await OrderProduct.findById(orderId).populate("customer");
-   
+
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
@@ -454,18 +454,19 @@ exports.stopPlan = async (req, res) => {
 
     await order.save();
 
-    // notification 
+    // notification
 
-        const deliveryBoy = await AdminsModel.findOne({ route: order?.customer?.routeno });
-    
-        const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) plan stoped`;
-    
-        const notification = new Notification({
-          deliveryboyId: deliveryBoy._id,
-          message,
-        });
-        await notification.save();
-    
+    const deliveryBoy = await AdminsModel.findOne({
+      route: order?.customer?.routeno,
+    });
+
+    const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) plan stoped`;
+
+    const notification = new Notification({
+      deliveryboyId: deliveryBoy._id,
+      message,
+    });
+    await notification.save();
 
     res.status(200).json({ message: "Plan stopped successfully", order });
   } catch (error) {
@@ -620,9 +621,6 @@ exports.getOrdersByRoute = async (req, res) => {
 //   }
 // };
 
-
-
-
 //tomorrow orders
 // exports.getTomorrowOrders = async (req, res) => {
 //     try {
@@ -754,17 +752,17 @@ exports.getOrdersByRoute = async (req, res) => {
 //   }
 // };
 
-
 exports.getTomorrowOrders = async (req, res) => {
   try {
-    // Get start of tomorrow
-    const startOfTomorrow = new Date();
-    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-    startOfTomorrow.setHours(0, 0, 0, 0);
-
-    // Get end of tomorrow
-    const endOfTomorrow = new Date(startOfTomorrow);
-    endOfTomorrow.setHours(23, 59, 59, 999);
+    // Convert local timezone to UTC range for tomorrow
+    const now = new Date();
+    
+    const startOfTomorrow = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
+    );
+    const endOfTomorrow = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 2)
+    );
 
     const orders = await OrderProduct.find({
       "selectedPlanDetails.dates": {
@@ -782,6 +780,7 @@ exports.getTomorrowOrders = async (req, res) => {
         path: "productItems.product",
         populate: { path: "category" },
       });
+
 
     const routeData = {};
 
@@ -806,9 +805,9 @@ exports.getTomorrowOrders = async (req, res) => {
         }
 
         routeData[routeNo][category].quantities[productSize] =
-          (routeData[routeNo][category].quantities[productSize] || 0) + quantity;
+          (routeData[routeNo][category].quantities[productSize] || 0) +
+          quantity;
 
-        // Convert to liters (safe parsing)
         const match = productSize.match(/\d+/);
         if (match) {
           const sizeInML = parseInt(match[0], 10);
@@ -825,24 +824,21 @@ exports.getTomorrowOrders = async (req, res) => {
   }
 };
 
-
 exports.getTodayOrders = async (req, res) => {
   try {
-    // Get today's date range in local time
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    const now = new Date();
 
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
+    const todayUTC = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    );
+    const tomorrowUTC = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
+    );
 
-    // Fetch orders where selectedPlanDetails.dates contains today's date and valid status
     const orders = await OrderProduct.find({
       "selectedPlanDetails.dates": {
         $elemMatch: {
-          date: {
-            $gte: startOfToday,
-            $lt: endOfToday,
-          },
+          date: { $gte: todayUTC, $lt: tomorrowUTC },
           status: { $nin: ["leave", "cancel"] },
         },
       },
@@ -853,7 +849,7 @@ exports.getTodayOrders = async (req, res) => {
         populate: { path: "category" },
       });
 
-    // Group orders by route number
+    // Group orders by route and category
     const routeData = {};
 
     orders.forEach((order) => {
@@ -865,8 +861,8 @@ exports.getTodayOrders = async (req, res) => {
 
       order.productItems.forEach((item) => {
         const product = item.product;
-        const productSize = product?.quantity || "Unknown"; // e.g., "100ML"
-        const category = product?.category || "Uncategorized"; // Ensure category name
+        const productSize = product?.quantity || "Unknown";
+        const category = product?.category || "Uncategorized";
         const quantity = item.quantity || 0;
 
         if (!routeData[routeNo][category]) {
@@ -876,11 +872,10 @@ exports.getTodayOrders = async (req, res) => {
           };
         }
 
-        // Count quantities by size
         routeData[routeNo][category].quantities[productSize] =
-          (routeData[routeNo][category].quantities[productSize] || 0) + quantity;
+          (routeData[routeNo][category].quantities[productSize] || 0) +
+          quantity;
 
-        // Convert to liters if numeric value found
         const match = productSize.match(/\d+/);
         if (match) {
           const sizeInML = parseInt(match[0], 10);
@@ -890,14 +885,16 @@ exports.getTodayOrders = async (req, res) => {
       });
     });
 
-    res.json({ success: true, data: routeData });
+
+    res.json({
+      success: true,
+      data: routeData,
+    });
   } catch (error) {
     console.error("Error fetching today's orders:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-
 
 // exports.getTodayOrders = async (req, res) => {
 //   try {
@@ -969,7 +966,6 @@ exports.getTodayOrders = async (req, res) => {
 //     res.status(500).json({ success: false, message: "Server error" });
 //   }
 // };
-
 
 //today orders
 // exports.getTodayOrders = async (req, res) => {
@@ -2248,7 +2244,7 @@ exports.changePlan = async (req, res) => {
 
   try {
     const order = await OrderProduct.findById(orderId).populate("customer");
-    
+
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
@@ -2257,63 +2253,56 @@ exports.changePlan = async (req, res) => {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    
     const previousDates = order.selectedPlanDetails.dates
-    .filter((d) => new Date(d.date) < today)
-    .map((d) => ({
-      date: new Date(d.date).setUTCHours(0, 0, 0, 0),
-      status: d.status,
-    }));
-    
+      .filter((d) => new Date(d.date) < today)
+      .map((d) => ({
+        date: new Date(d.date).setUTCHours(0, 0, 0, 0),
+        status: d.status,
+      }));
+
     let newDates = [];
-  //   let planStartDate = startDate ? new Date(startDate) : new Date();
-    
-    
-  //   planStartDate.setUTCHours(0, 0, 0, 0);
-  //   console.log(planStartDate, "hooo");
-  //   console.log(today, "today");
-    
-  //   const now = new Date();
-  //  const timeString = now.toLocaleTimeString(); // Local timezone
-  //  console.log(timeString); // e.g., "10:42:30 AM"
+    //   let planStartDate = startDate ? new Date(startDate) : new Date();
 
+    //   planStartDate.setUTCHours(0, 0, 0, 0);
+    //   console.log(planStartDate, "hooo");
+    //   console.log(today, "today");
 
-  //   if (planStartDate == today && timeString >  "3:42:30 AM" ) planStartDate = today + 1; // Ensure start date is today or later
+    //   const now = new Date();
+    //  const timeString = now.toLocaleTimeString(); // Local timezone
+    //  console.log(timeString); // e.g., "10:42:30 AM"
 
+    //   if (planStartDate == today && timeString >  "3:42:30 AM" ) planStartDate = today + 1; // Ensure start date is today or later
 
-  let planStartDate = startDate ? new Date(startDate) : new Date();
+    let planStartDate = startDate ? new Date(startDate) : new Date();
 
-const now = new Date();
+    const now = new Date();
 
+    // Set planStartDate to 00:00 UTC
+    planStartDate.setUTCHours(0, 0, 0, 0);
 
-// Set planStartDate to 00:00 UTC
-planStartDate.setUTCHours(0, 0, 0, 0);
+    // Convert current local time to 24-hour format
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentSecond = now.getSeconds();
 
-// Convert current local time to 24-hour format
-const currentHour = now.getHours();
-const currentMinute = now.getMinutes();
-const currentSecond = now.getSeconds();
+    // Target time = 3:42:30 AM
+    const targetHour = 3;
+    const targetMinute = 42;
+    const targetSecond = 30;
 
-// Target time = 3:42:30 AM
-const targetHour = 3;
-const targetMinute = 42;
-const targetSecond = 30;
+    // Compare current time with 3:42:30 AM
+    const isAfterTargetTime =
+      currentHour > targetHour ||
+      (currentHour === targetHour && currentMinute > targetMinute) ||
+      (currentHour === targetHour &&
+        currentMinute === targetMinute &&
+        currentSecond > targetSecond);
 
-// Compare current time with 3:42:30 AM
-const isAfterTargetTime =
-  currentHour > targetHour ||
-  (currentHour === targetHour && currentMinute > targetMinute) ||
-  (currentHour === targetHour &&
-    currentMinute === targetMinute &&
-    currentSecond > targetSecond);
-
-// If plan start is today AND current time is after 3:42 AM, move to tomorrow
-if (planStartDate.getTime() === today.getTime() && isAfterTargetTime) {
-  planStartDate = new Date(today);
-  planStartDate.setDate(today.getDate() + 1); // move to tomorrow
-}
-
-
+    // If plan start is today AND current time is after 3:42 AM, move to tomorrow
+    if (planStartDate.getTime() === today.getTime() && isAfterTargetTime) {
+      planStartDate = new Date(today);
+      planStartDate.setDate(today.getDate() + 1); // move to tomorrow
+    }
 
     switch (newPlanType) {
       case "daily":
@@ -2402,17 +2391,18 @@ if (planStartDate.getTime() === today.getTime() && isAfterTargetTime) {
 
     await order.save();
 
-//  notification creating
-       const  deliveryBoy = await  AdminsModel.findOne({route:  order?.customer?.routeno })
-    
-       const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) updated their order.`;
-    
-               const notification = new Notification({ 
-                deliveryboyId: deliveryBoy._id,
-                 message 
-               });
-               await notification.save();
-       
+    //  notification creating
+    const deliveryBoy = await AdminsModel.findOne({
+      route: order?.customer?.routeno,
+    });
+
+    const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) updated their order.`;
+
+    const notification = new Notification({
+      deliveryboyId: deliveryBoy._id,
+      message,
+    });
+    await notification.save();
 
     res.status(200).json({ message: "Plan updated successfully", order });
 
@@ -2431,5 +2421,3 @@ if (planStartDate.getTime() === today.getTime() && isAfterTargetTime) {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
-

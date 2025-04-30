@@ -10,10 +10,12 @@ const CustomerCart = require("../models/customercart");
 const Plan = require("../models/plans");
 const admin = require("firebase-admin");
 // Twilio Configuration
-const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN );
 const messaging = require("../config/firebaseconfig"); // Import Firebase Config
 const AdminsModel = require("../models/admins");
 const otpStorage = new Map();
+
+
 
 exports.login = asyncHandler(async (req, res) => {
   let { phone } = req.body;
@@ -22,7 +24,7 @@ exports.login = asyncHandler(async (req, res) => {
   if (!phone.startsWith("+91")) {
     phone = "+91 " + phone.replace(/^\+91\s*/, "").trim();
   }
-
+    
   // Check if customer exists
   const customer = await CustomerModel.findOne({ phone });
   if (!customer) {
@@ -47,7 +49,7 @@ exports.login = asyncHandler(async (req, res) => {
   try {
     await client.messages.create({
       body: `Your verification code is: ${otp}`,
-      from: process.env.TWLIO_NUMBER,
+      from: process.env.TWULIO_NUMBER,
       to: phone,
     });
 
