@@ -4,16 +4,18 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
-require("dotenv").config();
 const twilio = require("twilio");
 const CustomerCart = require("../models/customercart");
 const Plan = require("../models/plans");
 const admin = require("firebase-admin");
+const twilioClient = require('../utils/twilloClient');
+
 // Twilio Configuration
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN );
 const messaging = require("../config/firebaseconfig"); // Import Firebase Config
 const AdminsModel = require("../models/admins");
 const otpStorage = new Map();
+require("dotenv").config();
 
 
 
@@ -27,6 +29,8 @@ exports.login = asyncHandler(async (req, res) => {
     
   // Check if customer exists
   const customer = await CustomerModel.findOne({ phone });
+
+  
   if (!customer) {
     return res.status(400).json({ message: "Phone number not registered" });
   }
@@ -49,10 +53,11 @@ exports.login = asyncHandler(async (req, res) => {
   try {
     await client.messages.create({
       body: `Your verification code is: ${otp}`,
-      from: process.env.TWULIO_NUMBER,
+      from: process.env.TWLIO_NUMBER,
       to: phone,
     });
 
+  
     res.status(200).json({ message: "OTP sent successfully" });
   } catch (error) {
     console.error("Twilio Error:", error);

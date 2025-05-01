@@ -11,6 +11,8 @@ require("dotenv").config();
 const admin = require("firebase-admin");
 const AdminsModel = require("../models/admins");
 const Notification = require("../models/notification");
+const moment = require("moment-timezone");
+
 
 // Create an order
 exports.createOrder = async (req, res) => {
@@ -824,21 +826,17 @@ exports.getTomorrowOrders = async (req, res) => {
   }
 };
 
+
 exports.getTodayOrders = async (req, res) => {
   try {
-    const now = new Date();
-
-    const todayUTC = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-    );
-    const tomorrowUTC = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
-    );
+    // Get today and tomorrow in IST
+    const todayIST = moment.tz("Asia/Kolkata").startOf("day").toDate();
+    const tomorrowIST = moment.tz("Asia/Kolkata").add(1, "day").startOf("day").toDate();
 
     const orders = await OrderProduct.find({
       "selectedPlanDetails.dates": {
         $elemMatch: {
-          date: { $gte: todayUTC, $lt: tomorrowUTC },
+          date: { $gte: todayIST, $lt: tomorrowIST },
           status: { $nin: ["leave", "cancel"] },
         },
       },
@@ -885,7 +883,6 @@ exports.getTodayOrders = async (req, res) => {
       });
     });
 
-
     res.json({
       success: true,
       data: routeData,
@@ -895,6 +892,7 @@ exports.getTodayOrders = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 // exports.getTodayOrders = async (req, res) => {
 //   try {
