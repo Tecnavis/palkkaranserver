@@ -8,7 +8,6 @@ const twilio = require("twilio");
 const CustomerCart = require("../models/customercart");
 const Plan = require("../models/plans");
 const admin = require("firebase-admin");
-const twilioClient = require('../utils/twilloClient');
 
 // Twilio Configuration
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN );

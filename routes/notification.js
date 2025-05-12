@@ -9,4 +9,17 @@ router.get('/:customerId',controller.getNotificationByCustomerId)
 router.get('/delivery/:deliveryboyId',controller.getNotificationByDeliveryboyId)
 
 
+//get by customer id read
+router.get('/:customerId/read',controller.getNotificationReadByCustomerId)
+//get by delvery boy id read
+router.get('/delivery/:deliveryboyId/read',controller.getNotificationReadByDeliveryboyId)
+
+// read costemer notificaion
+router.patch('/notifications/:customerId/read', controller.markNotificationsAsReadCostmerId);
+
+// read delvery boy notificaion
+router.patch('/notifications/:deliveryboyId/read', controller.markNotificationsAsReadDelveryboyId );
+
+
+
 module.exports = router;

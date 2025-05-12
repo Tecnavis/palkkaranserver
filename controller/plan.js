@@ -232,6 +232,23 @@ exports.stopDailyPlan = async (req, res) => {
     res
       .status(200)
       .json({ message: `${plan.planType} plan stopped successfully`, plan });
+
+         const customer = await Customer.findById({_id: plan.customer});
+   if (!customer) {
+     return res.status(404).json({ message: "Customer not found" });
+   }
+
+   const deliveryBoy = await AdminsModel.findOne({ route: customer.routeno });
+
+   const message = `🛒 ${customer.name} (Route ${customer.routeno})  plan stopped`;
+
+   const notification = new Notification({
+     deliveryboyId: deliveryBoy._id,
+     message,
+   });
+   await notification.save();
+
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
@@ -528,7 +545,24 @@ exports.deletePlan = async (req, res) => {
     if (!deletedPlan) {
       return res.status(404).json({ message: "Plan not found" });
     }
+
+    
     res.status(200).json({ message: "Plan deleted successfully", deletedPlan });
+
+    const customer = await Customer.findById({_id: deletedPlan.customer});
+   if (!customer) {
+     return res.status(404).json({ message: "Customer not found" });
+   }
+
+   const deliveryBoy = await AdminsModel.findOne({ route: customer.routeno });
+
+   const message = `🛒 ${customer.name} (Route ${customer.routeno}) delete plan`;
+
+   const notification = new Notification({
+     deliveryboyId: deliveryBoy._id,
+     message,
+   });
+   await notification.save();
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });

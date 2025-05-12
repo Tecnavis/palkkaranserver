@@ -18,14 +18,8 @@ exports.getNotificationByCustomerId = async (req, res) => {
     try {
         const { customerId } = req.params;
 
-        // Update all unread notifications to read: true
-        await Notification.updateMany(
-            { customerId, read: false }, 
-            { $set: { read: true } }
-        );
-
-        // Fetch updated notifications
-        const notifications = await Notification.find({ customerId });
+          const notifications = await Notification.find({ customerId, isRead: false })
+    .sort({ createdAt: -1 });
 
         res.status(200).json({ notifications });
     } catch (error) {
@@ -35,23 +29,90 @@ exports.getNotificationByCustomerId = async (req, res) => {
 };
 
 
-//getNotificationByDeliveryboyId
-exports.getNotificationByDeliveryboyId = async (req, res) => {
+exports.getNotificationReadByCustomerId = async (req, res) => {
     try {
-        const { deliveryboyId } = req.params;
-        
-        // Update all unread notifications to read: true
-        await Notification.updateMany(
-            { deliveryboyId, read: false }, 
-            { $set: { read: true } }
-        );
+        const { customerId } = req.params;
 
-        // Fetch updated notifications
-        const notifications = await Notification.find({ deliveryboyId });
+          const notifications = await Notification.find({ customerId, isRead: true })
+    .sort({ createdAt: -1 });
 
         res.status(200).json({ notifications });
     } catch (error) {
         console.error("Error fetching notifications:", error);
         res.status(500).json({ error: "Failed to fetch notifications." });
     }
+};
+
+
+// Mark notifications as read
+exports.markNotificationsAsReadCostmerId = async (req, res) => {
+        const { customerId } = req.params;
+
+  try {
+   
+     // Update all unread notifications to read: true
+        await Notification.updateMany(
+            { customerId, read: false }, 
+            { $set: { read: true } }
+        );
+
+    res.status(200).json({ message: 'Notifications marked as read' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error marking notifications as read', error });
+  }
+};
+
+
+//getNotificationByDeliveryboyId
+exports.getNotificationByDeliveryboyId = async (req, res) => {
+    try {
+        const { deliveryboyId } = req.params;
+        
+        // Fetch updated notifications
+
+             const notifications = await Notification.find({ deliveryboyId, isRead: false })
+    .sort({ createdAt: -1 });
+
+
+        res.status(200).json({ notifications });
+    } catch (error) {
+        console.error("Error fetching notifications:", error);
+        res.status(500).json({ error: "Failed to fetch notifications." });
+    }
+};
+
+exports.getNotificationReadByDeliveryboyId = async (req, res) => {
+    try {
+        const { deliveryboyId } = req.params;
+        
+        // Fetch updated notifications
+        
+             const notifications = await Notification.find({ deliveryboyId, isRead: true })
+    .sort({ createdAt: -1 });
+
+
+        res.status(200).json({ notifications });
+    } catch (error) {
+        console.error("Error fetching notifications:", error);
+        res.status(500).json({ error: "Failed to fetch notifications." });
+    }
+};
+
+
+// Mark notifications as read
+exports.markNotificationsAsReadDelveryboyId = async (req, res) => {
+        const { deliveryboyId } = req.params;
+
+  try {
+   
+    // Update all unread notifications to read: true
+        await Notification.updateMany(
+            { deliveryboyId, read: false }, 
+            { $set: { read: true } }
+        );
+
+    res.status(200).json({ message: 'Notifications marked as read' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error marking notifications as read', error });
+  }
 };

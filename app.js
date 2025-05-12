@@ -5,6 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var connectDB = require('./config/db');
 var cors = require('cors');
+const cron = require("node-cron");
 require("./middleware/cronjob"); // Load cron job
 
 
@@ -25,6 +26,7 @@ var route = require('./routes/route');
 var rewarditem = require('./routes/rewarditem');
 var notification = require('./routes/notification');
 const rewardRoutes = require("./routes/reward");
+const { autoGenerateOrders } = require('./controller/orderdetails');
 // Connect to database
 connectDB();
 
@@ -44,6 +46,12 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+
+cron.schedule("0 18 * * *", async () => {
+  console.log("Running daily auto order generation at 6:00 PM...");
+  await autoGenerateOrders();
+});
 
 
 // View engine setup
