@@ -13,6 +13,7 @@ const AdminsModel = require("../models/admins");
 const Notification = require("../models/notification");
 // const moment = require("moment-timezone");
 const { addDays, isSameDay } = require("date-fns");
+const customer = require("../models/customer");
 
 
 
@@ -98,6 +99,15 @@ exports.createOrder = async (req, res) => {
      const deliveryBoy = await AdminsModel.findOne({
       route: customer?.routeno,
     });
+
+      const messageCustomer = `🛒 Plan created`;
+
+    const notificationCustomer = new Notification({
+      customerId: customer._id,
+      messageCustomer,
+    });
+    await notificationCustomer.save();
+
 
     const message = `🛒 ${customer.name} (Route ${customer?.routeno}) plan created`;
 
@@ -363,6 +373,16 @@ exports.delete = async (req, res) => {
       route: order?.customer?.routeno,
     });
 
+   
+
+     const messageCustomer = `🛒 Plan deleted`;
+
+    const notificationCustomer = new Notification({
+       customerId: order?.customer?._id,
+      messageCustomer,
+    });
+    await notificationCustomer.save();
+
     const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) plan deleted`;
 
     const notification = new Notification({
@@ -477,6 +497,14 @@ exports.stopPlan = async (req, res) => {
     const deliveryBoy = await AdminsModel.findOne({
       route: order?.customer?.routeno,
     });
+
+     const messageCustomer = `🛒 Plan stoped`;
+
+    const notificationCustomer = new Notification({
+      customerId:  order?.customer?._id,
+      messageCustomer,
+    });
+    await notificationCustomer.save();
 
     const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) plan stoped`;
 
@@ -2439,6 +2467,15 @@ exports.changePlan = async (req, res) => {
       route: order?.customer?.routeno,
     });
 
+
+       const messageCustomer = `🛒 Updated order.`;
+
+    const notificationCustomer = new Notification({
+      customerId:  order?.customer?._id,
+      messageCustomer,
+    });
+    await notificationCustomer.save();
+
     const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) updated their order.`;
 
     const notification = new Notification({
@@ -2550,6 +2587,15 @@ exports.autoGenerateOrders = async () => {
       });
 
       if (deliveryBoy) {
+       
+
+           const messageCustomer = `🛒 Auto-plan order created`;
+        const notificationCustomer = new Notification({
+            customerId: customer._id,
+          messageCustomer,
+        });
+        await notificationCustomer.save();
+
         const message = `🛒 ${customer.name} (Route ${customer?.routeno}) auto-plan order created`;
         const notification = new Notification({
           deliveryboyId: deliveryBoy._id,
@@ -2557,8 +2603,6 @@ exports.autoGenerateOrders = async () => {
         });
         await notification.save();
       }
-
-      console.log(`Auto-order created for ${customer.name} on ${today.toDateString()}`);
     }
   } catch (err) {
     console.error("Auto-generate order error:", err);

@@ -179,6 +179,15 @@ exports.createPlan = async (req, res) => {
     //  notification creating
 
     const deliveryBoy = await AdminsModel.findOne({ route: customer.routeno });
+  
+     const messageCustomer = `🛒  New order created.`;
+
+
+     const notificationCustomer = new Notification({
+      customerId: customer._id,
+      messageCustomer,
+    });
+    await notificationCustomer.save();
 
     const message = `🛒 ${customer.name} (Route ${customer.routeno}) placed a new order.`;
 
@@ -239,6 +248,15 @@ exports.stopDailyPlan = async (req, res) => {
    }
 
    const deliveryBoy = await AdminsModel.findOne({ route: customer.routeno });
+
+    const messageCustomer = `🛒 Plan stopped`;
+
+   const notificationCustomer = new Notification({
+     customerId: customer._id,
+     messageCustomer,
+   });
+   await notificationCustomer.save();
+
 
    const message = `🛒 ${customer.name} (Route ${customer.routeno})  plan stopped`;
 
@@ -428,6 +446,16 @@ exports.applyLeave = async (req, res) => {
     }
 
     const deliveryBoy = await AdminsModel.findOne({ route: customer.routeno });
+    
+    
+    const messageCustomer = `🛒 Applied for leave — affecting ${updatedPlans.length} plans and ${updatedOrders.length} orders.`;
+
+      const notificationCustomer = new Notification({
+      customerId: customer._id,
+      messageCustomer,
+    });
+    await notificationCustomer.save();
+
 
     const message = `🛒 ${customer.name} (Route ${customer.routeno}) applied for leave — affecting ${updatedPlans.length} plans and ${updatedOrders.length} orders.`;
 
@@ -555,6 +583,16 @@ exports.deletePlan = async (req, res) => {
    }
 
    const deliveryBoy = await AdminsModel.findOne({ route: customer.routeno });
+
+    const messageCustomer = `🛒 Delete plan`;
+
+   const notificationCustomer = new Notification({
+      customerId: customer._id,
+     messageCustomer,
+   });
+   await notificationCustomer.save();
+
+  
 
    const message = `🛒 ${customer.name} (Route ${customer.routeno}) delete plan`;
 
