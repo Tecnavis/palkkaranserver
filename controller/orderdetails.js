@@ -104,7 +104,7 @@ exports.createOrder = async (req, res) => {
 
     const notificationCustomer = new Notification({
       customerId: customer._id,
-      messageCustomer,
+      message: messageCustomer,
     });
     await notificationCustomer.save();
 
@@ -379,7 +379,7 @@ exports.delete = async (req, res) => {
 
     const notificationCustomer = new Notification({
        customerId: order?.customer?._id,
-      messageCustomer,
+       message: messageCustomer,
     });
     await notificationCustomer.save();
 
@@ -502,7 +502,7 @@ exports.stopPlan = async (req, res) => {
 
     const notificationCustomer = new Notification({
       customerId:  order?.customer?._id,
-      messageCustomer,
+      message: messageCustomer,
     });
     await notificationCustomer.save();
 
@@ -2472,7 +2472,7 @@ exports.changePlan = async (req, res) => {
 
     const notificationCustomer = new Notification({
       customerId:  order?.customer?._id,
-      messageCustomer,
+      message: messageCustomer,
     });
     await notificationCustomer.save();
 
@@ -2592,7 +2592,7 @@ exports.autoGenerateOrders = async () => {
            const messageCustomer = `🛒 Auto-plan order created`;
         const notificationCustomer = new Notification({
             customerId: customer._id,
-          messageCustomer,
+          message: messageCustomer,
         });
         await notificationCustomer.save();
 

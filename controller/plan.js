@@ -185,7 +185,7 @@ exports.createPlan = async (req, res) => {
 
      const notificationCustomer = new Notification({
       customerId: customer._id,
-      messageCustomer,
+       message: messageCustomer,
     });
     await notificationCustomer.save();
 
@@ -253,7 +253,7 @@ exports.stopDailyPlan = async (req, res) => {
 
    const notificationCustomer = new Notification({
      customerId: customer._id,
-     messageCustomer,
+     message: messageCustomer,
    });
    await notificationCustomer.save();
 
@@ -452,7 +452,7 @@ exports.applyLeave = async (req, res) => {
 
       const notificationCustomer = new Notification({
       customerId: customer._id,
-      messageCustomer,
+       message: messageCustomer,
     });
     await notificationCustomer.save();
 
@@ -588,7 +588,7 @@ exports.deletePlan = async (req, res) => {
 
    const notificationCustomer = new Notification({
       customerId: customer._id,
-     messageCustomer,
+     message: messageCustomer,
    });
    await notificationCustomer.save();
 
