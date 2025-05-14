@@ -18,7 +18,7 @@ exports.getNotificationByCustomerId = async (req, res) => {
     try {
         const { customerId } = req.params;
 
-          const notifications = await Notification.find({ customerId, isRead: false })
+          const notifications = await Notification.find({ customerId, read: false })
     .sort({ createdAt: -1 });
 
         res.status(200).json({ notifications });
@@ -33,7 +33,7 @@ exports.getNotificationReadByCustomerId = async (req, res) => {
     try {
         const { customerId } = req.params;
 
-          const notifications = await Notification.find({ customerId, isRead: true })
+          const notifications = await Notification.find({ customerId, read: true })
     .sort({ createdAt: -1 });
 
         res.status(200).json({ notifications });
@@ -70,7 +70,7 @@ exports.getNotificationByDeliveryboyId = async (req, res) => {
         
         // Fetch updated notifications
 
-             const notifications = await Notification.find({ deliveryboyId, isRead: false })
+             const notifications = await Notification.find({ deliveryboyId, read: false })
     .sort({ createdAt: -1 });
 
 
@@ -87,7 +87,7 @@ exports.getNotificationReadByDeliveryboyId = async (req, res) => {
         
         // Fetch updated notifications
         
-             const notifications = await Notification.find({ deliveryboyId, isRead: true })
+             const notifications = await Notification.find({ deliveryboyId, read: true })
     .sort({ createdAt: -1 });
 
 
