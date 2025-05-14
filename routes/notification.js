@@ -15,10 +15,10 @@ router.get('/:customerId/read',controller.getNotificationReadByCustomerId)
 router.get('/delivery/:deliveryboyId/read',controller.getNotificationReadByDeliveryboyId)
 
 // read costemer notificaion
-router.patch('/notifications/:customerId/read', controller.markNotificationsAsReadCostmerId);
+router.patch('/:customerId/read', controller.markNotificationsAsReadCostmerId);
 
 // read delvery boy notificaion
-router.patch('/notifications/:deliveryboyId/read', controller.markNotificationsAsReadDelveryboyId );
+router.patch('/delivery/:deliveryboyId/read', controller.markNotificationsAsReadDelveryboyId );
 
 
 
