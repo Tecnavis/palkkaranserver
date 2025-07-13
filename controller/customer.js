@@ -857,7 +857,7 @@ exports.getPaidAmounts = async (req, res) => {
         message: "Customer not found",
       });
     }
-
+    
     res.status(200).json({
       paidAmounts: customer.paidAmounts,
     });

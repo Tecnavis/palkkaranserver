@@ -2504,38 +2504,45 @@ exports.changePlan = async (req, res) => {
 
 
 
-
 exports.autoGenerateOrders = async () => {
   try {
     const today = new Date();
-    const plans = await Plan.find({ isActive: true }).populate("customer");
+    today.setHours(0, 0, 0, 0);
+
+    const plans = await Plan.find({
+      isActive: true,
+      planType: { $ne: "introductory" },
+    }).populate("customer");
 
     for (const plan of plans) {
       const customer = plan.customer;
       if (!customer) continue;
 
-      const planDates = plan.dates.map((d) => new Date(d));
-      const isTodayScheduled = planDates.some((d) => isSameDay(d, today));
-      if (!isTodayScheduled) continue;
+      // Get the plan's dates sorted ascending
+      const sortedDates = plan.dates.sort((a, b) => new Date(a) - new Date(b));
+      const lastDate = new Date(sortedDates[sortedDates.length - 1]);
+      lastDate.setHours(0, 0, 0, 0);
 
-      // Check if today's order already exists for this plan
+      // If today is NOT the last plan date, skip
+      if (today.getTime() !== lastDate.getTime()) continue;
+
+      // Check if there is already an order for this last date
       const existingOrder = await OrderProduct.findOne({
         customer: customer._id,
         plan: plan._id,
         "selectedPlanDetails.dates.date": {
-          $in: [today.toISOString().split('T')[0]] // match today's date string
+          $in: [today.toISOString().split("T")[0]],
         },
       });
 
       if (existingOrder) continue;
 
-      const orderAddress = customer.address[0];
+      const orderAddress = customer.address?.[0];
       if (!orderAddress) continue;
 
-      // Get the latest order (optional: limit to this plan)
       const lastOrder = await OrderProduct.findOne({
         customer: customer._id,
-        plan: plan._id
+        plan: plan._id,
       }).sort({ createdAt: -1 });
 
       if (!lastOrder) continue;
@@ -2553,15 +2560,55 @@ exports.autoGenerateOrders = async () => {
       );
 
       const totalRoutePrice = validatedProductItems.reduce(
-        (sum, item) => sum + item.routePrice * item.quantity,
+        (sum, item) => sum + (item?.routePrice || 0) * (item?.quantity || 0),
         0
       );
 
+      // --- Generate new dates based on plan type ---
+      let newDates = [];
+      const nextStart = new Date(lastDate);
+      nextStart.setDate(nextStart.getDate() + 1);
+
+      switch (plan.planType) {
+        case "daily":
+          newDates = [nextStart];
+          break;
+        case "weekly":
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(nextStart);
+            d.setDate(nextStart.getDate() + i);
+            newDates.push(d);
+          }
+          break;
+        case "monthly":
+          for (let i = 0; i < 30; i++) {
+            const d = new Date(nextStart);
+            d.setDate(nextStart.getDate() + i);
+            newDates.push(d);
+          }
+          break;
+        case "alternative":
+        case "custom":
+          // If it's custom or alternative, just repeat the same structure for next cycle (optional)
+          newDates = plan.dates.map((_, i) => {
+            const d = new Date(nextStart);
+            d.setDate(nextStart.getDate() + i);
+            return d;
+          });
+          break;
+        default:
+          continue; // Skip unknown plan types
+      }
+
+      // Update plan with new dates
+      plan.dates = newDates;
+      await plan.save();
+
       const selectedPlanDetails = {
         planType: plan.planType,
-        dates: planDates.map((date) => ({
+        dates: newDates.map((date) => ({
           date,
-          status: isSameDay(date, today) ? "pending" : "upcoming"
+          status: isSameDays(date, today) ? "pending" : "upcoming",
         })),
         isActive: plan.isActive,
       };
@@ -2587,19 +2634,15 @@ exports.autoGenerateOrders = async () => {
       });
 
       if (deliveryBoy) {
-       
-
-           const messageCustomer = `🛒 Auto-plan order created`;
         const notificationCustomer = new Notification({
-            customerId: customer._id,
-          message: messageCustomer,
+          customerId: customer._id,
+          message: `🛒 Auto-plan order created`,
         });
         await notificationCustomer.save();
 
-        const message = `🛒 ${customer.name} (Route ${customer?.routeno}) auto-plan order created`;
         const notification = new Notification({
           deliveryboyId: deliveryBoy._id,
-          message,
+          message: `🛒 ${customer.name} (Route ${customer?.routeno}) auto-plan order created`,
         });
         await notification.save();
       }
@@ -2608,3 +2651,13 @@ exports.autoGenerateOrders = async () => {
     console.error("Auto-generate order error:", err);
   }
 };
+
+// Helper to compare date parts only
+function isSameDays(date1, date2) {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+}
+
