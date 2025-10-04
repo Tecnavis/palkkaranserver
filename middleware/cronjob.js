@@ -41,14 +41,13 @@ cron.schedule("0 0 1 * *", async () => {
         });
 
         if (!customersWithOrders.length) {
-            console.log("No invoices to send this month.");
             return;
         }
 
         for (const customerId of customersWithOrders) {
             await sendMonthlyInvoice({ params: { customerId } }, { status: () => ({ json: () => {} }) });
         }
-        console.log(`Invoices sent to ${customersWithOrders.length} customers.`);
+        console.error(`Invoices sent to ${customersWithOrders.length} customers.`);
         
     } catch (error) {
         console.error("Error in sending invoices:", error.message);
@@ -65,7 +64,7 @@ cron.schedule("0 0 * * *", async () => {
 
     try {
         await Notification.deleteMany({ read: true, createdAt: { $lte: sevenDaysAgo } });
-        console.log("Deleted old read notifications.");
+        console.error("Deleted old read notifications.");
     } catch (error) {
         console.error("Error deleting old notifications:", error);
     }

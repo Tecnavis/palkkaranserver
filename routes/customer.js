@@ -50,4 +50,6 @@ router.get("/routeno-based-customer/:routeno", Controller.getCustomersByRouteNo)
 router.put("/update-customer-index/:customerId", Controller.updateCustomerIndex);
 
 router.patch("/update-payment", Controller.updatePayment);
+
+
 module.exports = router;

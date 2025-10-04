@@ -60,15 +60,15 @@ adminSchema.pre("save", async function (next) {
           this.password = hashedPassword;
           next()
         } catch (err) {
-          console.log(err.message, "something went wrong in password hashing");
+          console.error(err.message, "something went wrong in password hashing");
           return next(err);
         }
       } else {
-        console.log("Password is already hashed.");
+        console.error("Password is already hashed.");
         return next();
       }
     } else {
-      console.log("Password is not modified.");
+      console.error("Password is not modified.");
       return next();
     }
   });

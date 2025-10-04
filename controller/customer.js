@@ -7,12 +7,16 @@ const nodemailer = require("nodemailer");
 const twilio = require("twilio");
 const CustomerCart = require("../models/customercart");
 const Plan = require("../models/plans");
+const OrderProduct = require("../models/orderdetails");
 const admin = require("firebase-admin");
 
 // Twilio Configuration
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN );
 const messaging = require("../config/firebaseconfig"); // Import Firebase Config
 const AdminsModel = require("../models/admins");
+const { AddOnResultInstance } = require("twilio/lib/rest/api/v2010/account/recording/addOnResult");
+const Invoice = require("../models/invoice"); 
+
 const otpStorage = new Map();
 require("dotenv").config();
 
@@ -781,7 +785,165 @@ exports.addPaidAmount = async (req, res) => {
   }
 };
 
-// Confirm paid amount
+
+// auto generate invoice 
+exports.generateMonthlyInvoices = async (req, res) => {
+  try {
+    const { date } = req.body;
+
+    
+    if (!date) {
+      return res.status(400).json({ message: "date is required" });
+    }
+    
+    const targetDate = new Date(date);
+    if (isNaN(targetDate.getTime())) {
+      return res.status(400).json({ message: "Invalid date format" });
+    }
+    
+    const targetYear = targetDate.getFullYear();
+    const targetMonth = targetDate.getMonth();
+
+    
+    const invoice = await Invoice.findOne({ invoMonth:  targetMonth,  invoYear: targetYear  })
+    if(invoice) {
+       if (invoice.invoMonth == targetMonth && invoice.invoYear == targetYear) {
+      return res.status(400).json({ message: "invoice all ready register" });
+    }
+    }
+
+   
+
+
+    // 1️⃣ Get all unique customer IDs
+    const ordersAll = await OrderProduct.find();
+    const customerIds = [
+      ...new Set(ordersAll.map((order) => order.customer.toString())),
+    ];
+
+    const results = [];
+
+    // 2️⃣ Loop customers one by one
+    for (const custId of customerIds) {
+      const orders = await OrderProduct.find({ customer: custId })
+        .populate("customer", "name email phone customerId paidAmounts")
+        .populate("productItems.product", "category quantity")
+        .populate("plan")
+        .lean();
+
+      if (!orders.length) continue;
+
+      // 3️⃣ Calculate invoices for this customer
+const formattedResponse = orders.map((order) => {
+  let totalAmount = 0;
+  let remainingDiscount = 3;
+
+  const orderItems = order.selectedPlanDetails?.dates
+    .filter((dateItem) => dateItem.status === "delivered")
+    .map((dateItem, index) => ({
+      no: index + 1,
+      date: dateItem.date,
+      status: dateItem.status,
+      products: order.productItems.map((item) => {
+        let adjustedQuantity = item.quantity;
+
+        if (
+          order.selectedPlanDetails?.planType === "introductory" &&
+          remainingDiscount > 0
+        ) {
+          const deduction = Math.min(adjustedQuantity, remainingDiscount);
+          adjustedQuantity -= deduction;
+          remainingDiscount -= deduction;
+        }
+
+        const subtotal = adjustedQuantity * item.routePrice;
+        totalAmount += subtotal;
+
+        return {
+          product: item.product?.category || "N/A",
+          quantity: adjustedQuantity,
+          routePrice: item.routePrice,
+          ml: item.product?.quantity,
+          subtotal,
+        };
+      }),
+    }));
+    
+  return {
+    customerId: order.customer?._id || order.customer, // ✅ FIXED
+    orderItems,
+    total: totalAmount,
+  };
+});
+
+      // 4️⃣ Filter this month's data only
+      const filteredInvoices = formattedResponse
+        .map((inv) => {
+          const filteredOrderItems = inv.orderItems?.filter((orderItem) => {
+            const orderDate = new Date(orderItem.date);
+            return (
+              orderDate.getMonth() === targetMonth &&
+              orderDate.getFullYear() === targetYear
+            );
+          });
+
+          if (filteredOrderItems && filteredOrderItems.length > 0) {
+            return {
+              ...inv,
+              orderItems: filteredOrderItems,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      if (!filteredInvoices.length) continue;
+
+      // 5️⃣ Calculate grand total for this customer
+      let grandTotal = 0;
+      filteredInvoices.forEach((inv) => {
+        inv.orderItems
+          .filter((orderItem) => orderItem.status === "delivered")
+          .forEach((orderItem) => {
+            orderItem.products.forEach((prod) => {
+              grandTotal += prod.subtotal;
+            });
+          });
+      });
+
+      // 6️⃣ Save to Invoice schema
+      const newInvoice = new Invoice({
+        customerId: custId,
+        orderItems: filteredInvoices.flatMap((f) => f.orderItems), 
+        monthAmount: grandTotal, 
+        getAmount: 0,
+        getBalance: 0,
+        payBalance: 0,
+        total: 0,
+        invoMonth: String(targetMonth), 
+        invoYear: String(targetYear),
+        status: "un paid",
+        paymentType: "not selected",
+      });
+
+      await newInvoice.save();
+      results.push(newInvoice);
+    }
+
+    
+
+    res.status(200).json({
+      message: "Monthly invoices generated successfully",
+      invoices: results,
+    });
+  } catch (error) {
+    console.error("Error generating invoices:", error);
+    res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+
+
 exports.confirmPaidAmount = async (req, res) => {
   try {
     const { customerId, paidAmountId } = req.body;
@@ -929,22 +1091,48 @@ exports.getUnconfirmedPaidAmounts = async (req, res) => {
 };
 
 //update customerindex by customerid
+// exports.updateCustomerIndex = async (req, res) => {
+//   try {
+//     const { customerId } = req.params;
+//     const { customerindex } = req.body;
+
+//     console.log(customerId, customerindex, "iindex");
+    
+//     const customer = await CustomerModel.findOne({ customerId });
+//     if (!customer) {
+//       return res.status(404).json({ message: "Customer not found" });
+//     }
+//     customer.customerindex = customerindex;
+//     await customer.save();
+//     res.status(200).json({ message: "Customer index updated successfully" });
+//   } catch (error) {
+//     console.error("Error updating customer index:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// };
+
 exports.updateCustomerIndex = async (req, res) => {
-  try {
+    try {
     const { customerId } = req.params;
     const { customerindex } = req.body;
-    const customer = await CustomerModel.findOne({ customerId });
+
+    const customer = await CustomerModel.findOneAndUpdate(
+      { customerId },
+      { $set: { customerindex } },
+      { new: true }
+    );
+
     if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
+      return res.status(404).json({ message: 'Customer not found' });
     }
-    customer.customerindex = customerindex;
-    await customer.save();
-    res.status(200).json({ message: "Customer index updated successfully" });
-  } catch (error) {
-    console.error("Error updating customer index:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
 
 //update payment by id
 

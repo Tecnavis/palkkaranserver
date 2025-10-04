@@ -25,8 +25,12 @@ var banner = require('./routes/banner');
 var route = require('./routes/route');
 var rewarditem = require('./routes/rewarditem');
 var notification = require('./routes/notification');
+var invoice = require('./routes/invoice');
+
 const rewardRoutes = require("./routes/reward");
 const { autoGenerateOrders } = require('./controller/orderdetails');
+const { generateMonthlyInvoices } = require("./controller/customer");
+
 // Connect to database
 connectDB();
 
@@ -34,7 +38,7 @@ var app = express();
 
 // CORS configuration
 app.use(cors({
-  origin: ["http://localhost:5174", "http://localhost:3000", "https://admin.palkkaran.in", "http://localhost:5173"],
+  origin: ["http://localhost:5174", "http://localhost:3000", "https://admin.palkkaran.in", "http://localhost:4173"],
   methods: ["PUT", "DELETE", "POST", "GET", "PATCH"],
   credentials: true
 }));
@@ -51,6 +55,35 @@ app.use(express.static(path.join(__dirname, 'public')));
 cron.schedule("0 18 * * *", async () => {
   console.log("Running daily auto order generation at 6:00 PM...");
   await autoGenerateOrders();
+});
+
+
+
+// Run every 1st of month at 12:00 AM
+cron.schedule("0 0 1 * *", async () => {
+  try {
+    const today = new Date();
+    let prevMonth = today.getMonth() - 1;
+    let year = today.getFullYear();
+    
+    if (prevMonth < 0) {
+      prevMonth = 11; // December
+      year = year - 1;
+    }
+
+    // Create a date for the first day of previous month
+    const firstDayPrevMonth = new Date(year, prevMonth, 1);
+
+
+    await generateMonthlyInvoices({ body: { date: firstDayPrevMonth } }, {
+      status: (code) => ({
+        json: (data) => console.log("Cron response:", data)
+      })
+    });
+
+  } catch (err) {
+    console.error("Error in scheduled invoice generation:", err);
+  }
 });
 
 
@@ -75,6 +108,7 @@ app.use('/banner',banner)
 app.use('/route',route)
 app.use('/rewarditem', rewarditem)
 app.use('/notification',notification)
+app.use('/invoice', invoice)
 app.use("/rewards", rewardRoutes);
 // 404 handler - This should come after all valid routes
 app.use((req, res, next) => {

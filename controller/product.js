@@ -90,8 +90,7 @@ exports.get = asyncHandler(async (req, res) => {
 //update product
 exports.update = asyncHandler(async (req, res) => {
     try {
-      console.log("Request body:", req.body);
-      console.log("Request files:", req.files);
+   
   
       const updates = req.body;
       if (req.files) {

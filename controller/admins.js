@@ -164,7 +164,6 @@ exports.update = asyncHandler(async (req, res) => {
       return res.json({ updatedAdmin });
       
     } catch (err) {
-      console.log(err, "An error occurred during admin update");
       return res.status(500).json({ message: "An error occurred during admin update" });
     }
   });

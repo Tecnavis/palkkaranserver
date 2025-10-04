@@ -44,6 +44,7 @@ router.get('/bottles-summary/allcustomer', orderController.getBottlesSummary);
 
 // Get product items by customer ID
 router.get("/invoice/:customerId", orderController.invoice);
+router.get("/allCustomer/invoice", orderController.invoicesAllCustomer);
 router.get("/monthlyinvoice/:customerId", orderController.monthlyinvoice);
 
 router.get("/send-invoice/:customerId", orderController.sendMonthlyInvoice); // Manual trigger
