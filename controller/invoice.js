@@ -15,41 +15,7 @@ exports.getInvoiceAll = async (req, res) => {
 
 exports.getInvoiceDate = async (req, res) => {
   try {
-      const { date } = req.params;
-    
-    if (!date) {
-      return res.status(400).json({ message: "date is required" });
-    }
-
-    const targetDate = new Date(date);
-    if (isNaN(targetDate.getTime())) {
-      return res.status(400).json({ message: "Invalid date format" });
-    }
-
-    const targetYear = targetDate.getFullYear();
-    const targetMonth = targetDate.getMonth();    
-
-    const invoice = await invoiceModel.find({
-      invoMonth: targetMonth,
-      invoYear: targetYear,
-    }).populate("customerId");
-
-      if (!invoice) {
-      return res.status(404).json({ message: "Invoice not found" });
-    }
-
-    
-    return res.status(200).json(invoice);
-  } catch (error) {
-    return res.status(500).json({ message: "Server error" });
-  }
-};
-
-exports.getInvoiceId = async (req, res) => {
-  try {
-
-  
-    const { customerId,  date  } = req.params;
+    const { date } = req.params;
 
     if (!date) {
       return res.status(400).json({ message: "date is required" });
@@ -63,17 +29,16 @@ exports.getInvoiceId = async (req, res) => {
     const targetYear = targetDate.getFullYear();
     const targetMonth = targetDate.getMonth();
 
-
-    const invoice = await invoiceModel.findOne({
-      customerId: customerId,
-      invoMonth: targetMonth,
-      invoYear: targetYear,
-    }).populate("customerId");
+    const invoice = await invoiceModel
+      .find({
+        invoMonth: targetMonth,
+        invoYear: targetYear,
+      })
+      .populate("customerId");
 
     if (!invoice) {
       return res.status(404).json({ message: "Invoice not found" });
     }
-
 
     return res.status(200).json(invoice);
   } catch (error) {
@@ -81,12 +46,11 @@ exports.getInvoiceId = async (req, res) => {
   }
 };
 
+exports.getInvoiceId = async (req, res) => {
+  try {
+    const { customerId, date } = req.params;
 
-exports.updateInvoiceStatus = async (req, res) => {
-   const { customerId } = req.params;
-    const   date  = req.body.monthStart;    
-
-      if (!date) {
+    if (!date) {
       return res.status(400).json({ message: "date is required" });
     }
 
@@ -96,40 +60,66 @@ exports.updateInvoiceStatus = async (req, res) => {
     }
 
     const targetYear = targetDate.getFullYear();
-    const targetMonth = targetDate.getMonth(); // 0–11
+    const targetMonth = targetDate.getMonth();
 
-    // Get current month invoice
-    const invoice = await invoiceModel.findOne({
-      customerId: customerId,
-      invoMonth: targetMonth,
-      invoYear: targetYear,
-    });
+    const invoice = await invoiceModel
+      .findOne({
+        customerId: customerId,
+        invoMonth: targetMonth,
+        invoYear: targetYear,
+      })
+      .populate("customerId");
 
     if (!invoice) {
       return res.status(404).json({ message: "Invoice not found" });
     }
 
-     invoice.status = "paid";
-     invoice.getAmount = invoice.monthAmount;
-      invoice.getBalance = 0;
-      invoice.payBalance = 0;
+    return res.status(200).json(invoice);
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
-    invoice.save();
-    return res.status(200).json({ message: "Invoice updated" });
+exports.updateInvoiceStatus = async (req, res) => {
+  const { customerId } = req.params;
+  const date = req.body.monthStart;
 
+  if (!date) {
+    return res.status(400).json({ message: "date is required" });
+  }
 
-}
+  const targetDate = new Date(date);
+  if (isNaN(targetDate.getTime())) {
+    return res.status(400).json({ message: "Invalid date format" });
+  }
+
+  const targetYear = targetDate.getFullYear();
+  const targetMonth = targetDate.getMonth(); // 0–11
+
+  // Get current month invoice
+  const invoice = await invoiceModel.findOne({
+    customerId: customerId,
+    invoMonth: targetMonth,
+    invoYear: targetYear,
+  });
+
+  if (!invoice) {
+    return res.status(404).json({ message: "Invoice not found" });
+  }
+
+  invoice.status = "paid";
+  invoice.getAmount = invoice.monthAmount;
+  invoice.getBalance = 0;
+  invoice.payBalance = 0;
+
+  invoice.save();
+  return res.status(200).json({ message: "Invoice updated" });
+};
 
 exports.updateInvoiceId = async (req, res) => {
   try {
-
-    
-    const  id  = req.params.customerId;
+    const id = req.params.customerId;
     const { amount, date } = req.body;
-
-    
-    
-
 
     if (!date) {
       return res.status(400).json({ message: "date is required" });
@@ -198,6 +188,8 @@ exports.updateInvoiceId = async (req, res) => {
     return res.status(200).json({ message: "Invoice updated", invoice });
   } catch (error) {
     console.error("Error updating invoice:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
