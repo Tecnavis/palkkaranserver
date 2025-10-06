@@ -20,6 +20,8 @@ const customer = require("../models/customer");
 // Create an order
 exports.createOrder = async (req, res) => {
   try {
+    
+
     const { customerId, productItems, planId, paymentMethod, newAddress } =
       req.body;
 

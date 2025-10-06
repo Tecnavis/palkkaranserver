@@ -58,6 +58,13 @@ exports.createPlan = async (req, res) => {
       return res.status(404).json({ message: "Customer not found" });
     }
 
+
+      const customerPlan = await Plan.findOne({customer: customerId});
+    if (customerPlan) {
+      
+      return res.status(403).json({ message: "This customer all ready plan taken please go to edit plan" });
+    }
+
     let planStartDate = startDate ? new Date(startDate) : new Date();
 
     const now = new Date();
