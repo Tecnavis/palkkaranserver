@@ -48,9 +48,12 @@ exports.login = asyncHandler(async (req, res) => {
       });
   }
 
+  
+
   // Generate OTP (6-digit random number)
   const otp = Math.floor(100000 + Math.random() * 900000);
   otpStorage.set(phone, otp); // Store OTP temporarily
+
 
   // Send OTP via Twilio
   try {
@@ -72,16 +75,23 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
   const { phone, otp, fcmToken } = req.body;
 
   // Check if OTP is valid
-  const storedOtp = otpStorage.get(phone);
-  if (!storedOtp || storedOtp != otp) {
-    return res.status(400).json({ message: "Invalid OTP" });
-  }
+  const formattedPhone = phone.startsWith("+91")
+      ? phone
+      : "+91 " + phone.replace(/^\+91\s*/, "").trim();
 
-  // Remove OTP from temporary storage
-  otpStorage.delete(phone);
+    // Validate OTP
+    const storedOtp = otpStorage.get(formattedPhone);
+    if (!storedOtp || storedOtp != otp) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+
+
+    // Remove OTP from storage
+    otpStorage.delete(formattedPhone);
 
   // Find customer
-  const customer = await CustomerModel.findOne({ phone });
+  const customer = await CustomerModel.findOne({ phone : formattedPhone });
   if (!customer) {
     return res.status(400).json({ message: "Customer not found" });
   }

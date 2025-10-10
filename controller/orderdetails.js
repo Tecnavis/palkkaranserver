@@ -2981,134 +2981,327 @@ exports.changePlan = async (req, res) => {
 
 
 
+// exports.autoGenerateOrders = async () => {
+//   try {
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0) + 1;
+
+    
+
+//     const plans = await Plan.find({
+//       isActive: true,
+//       planType: { $ne: "introductory" },
+//     }).populate("customer");
+
+//     console.log(plans, "plans");
+
+//     console.log(today, "today ");
+    
+    
+
+//     for (const plan of plans) {
+//       const customer = plan.customer;
+//       if (!customer) continue;
+
+//       // Filter out past dates and sort remaining dates
+//       const futureDates = plan.dates.filter(date => new Date(date) >= today);
+
+//       console.log(futureDates, "hii l");
+      
+//       const sortedDates = futureDates.sort((a, b) => new Date(a) - new Date(b));
+      
+//       // If no dates left, skip this plan
+//       if (sortedDates.length === 0) continue;
+
+//       const firstDate = new Date(sortedDates[0]);
+//       firstDate.setHours(0, 0, 0, 0);
+
+//       // If today is NOT the first plan date, skip
+//       if (today.getTime() !== firstDate.getTime()) continue;
+
+//       // Check if there is already an order for today's date
+//       const existingOrder = await OrderProduct.findOne({
+//         customer: customer._id,
+//         plan: plan._id,
+//         "selectedPlanDetails.dates.date": today
+//       });
+
+//       if (existingOrder) continue;
+
+//       const orderAddress = customer.address?.[0];
+//       if (!orderAddress) continue;
+
+//       const lastOrder = await OrderProduct.findOne({
+//         customer: customer._id,
+//         plan: plan._id,
+//       }).sort({ createdAt: -1 });
+
+//       if (!lastOrder) continue;
+
+//       const validatedProductItems = await Promise.all(
+//         lastOrder.productItems.map(async (item) => {
+//           const product = await Product.findById(item.product);
+//           if (!product) return null;
+//           return {
+//             product: item.product,
+//             quantity: item.quantity,
+//             routePrice: item.routePrice,
+//           };
+//         })
+//       ).then(items => items.filter(item => item !== null));
+
+//       const totalRoutePrice = validatedProductItems.reduce(
+//         (sum, item) => sum + (item.routePrice * item.quantity),
+//         0
+//       );
+
+//       // --- Generate new dates for the NEXT cycle ---
+//       let newDates = [];
+//       const lastDate = new Date(sortedDates[sortedDates.length - 1]);
+//       const nextStart = new Date(lastDate);
+//       nextStart.setDate(nextStart.getDate() + 1);
+
+//       switch (plan.planType) {
+//         case "daily":
+//           // For daily, add next day only
+//           newDates = [new Date(nextStart)];
+//           break;
+//         case "weekly":
+//           // For weekly, add next 7 days
+//           for (let i = 0; i < 7; i++) {
+//             const d = new Date(nextStart);
+//             d.setDate(nextStart.getDate() + i);
+//             newDates.push(d);
+//           }
+//           break;
+//         case "monthly":
+//           // For monthly, add next 30 days
+//           for (let i = 0; i < 30; i++) {
+//             const d = new Date(nextStart);
+//             d.setDate(nextStart.getDate() + i);
+//             newDates.push(d);
+//           }
+//           break;
+//         case "alternative":
+//           // For alternative days, add dates with 1 day gap
+//           const altDays = plan.dates.length || 15; // Default to 15 days if no dates
+//           for (let i = 0; i < altDays; i += 2) { // Every 2nd day
+//             const d = new Date(nextStart);
+//             d.setDate(nextStart.getDate() + i);
+//             newDates.push(d);
+//           }
+//           break;
+//         case "custom":
+//           // For custom, replicate the pattern with same number of days
+//           const customDays = plan.dates.length;
+//           for (let i = 0; i < customDays; i++) {
+//             const d = new Date(nextStart);
+//             d.setDate(nextStart.getDate() + i);
+//             newDates.push(d);
+//           }
+//           break;
+//         default:
+//           continue;
+//       }
+
+//       // Remove the current date (today) from plan dates since it's being processed
+//       const updatedPlanDates = sortedDates.slice(1).concat(newDates);
+
+//       console.log(updatedPlanDates, "hiii");
+      
+      
+//       // Update plan with new dates
+//       plan.dates = updatedPlanDates;
+
+
+//       console.log(plan, "save plan");
+      
+
+//       await plan.save();
+
+//       // Create selected plan details for the order
+//       const selectedPlanDetails = {
+//         planType: plan.planType,
+//         dates: [
+//           {
+//             date: today,
+//             status: "pending"
+//           }
+//         ],
+//         isActive: plan.isActive,
+//       };
+
+//       const newOrder = new OrderProduct({
+//         customer: customer._id,
+//         productItems: validatedProductItems,
+//         plan: plan._id,
+//         selectedPlanDetails,
+//         totalPrice: totalRoutePrice,
+//         paymentMethod: "not selected",
+//         paymentStatus: "unpaid",
+//         address: orderAddress,
+//         paidamount: 0,
+//         Total: totalRoutePrice, // Set Total to match totalPrice
+//       });
+
+//       console.log(newOrder, "new order");
+      
+
+//       await newOrder.save();
+
+//       // Send notifications
+//       const deliveryBoy = await AdminsModel.findOne({
+//         route: customer?.routeno,
+//       });
+
+//       if (deliveryBoy) {
+//         const notificationCustomer = new Notification({
+//           customerId: customer._id,
+//           message: `🛒 Auto-plan order created for ${today.toLocaleDateString()}`,
+//         });
+//         await notificationCustomer.save();
+
+//         const notification = new Notification({
+//           deliveryboyId: deliveryBoy._id,
+//           message: `🛒 ${customer.name} (Route ${customer?.routeno}) auto-plan order created`,
+//         });
+//         await notification.save();
+//       }
+
+//     }
+//   } catch (err) {
+//     console.error("Auto-generate order error:", err);
+//   }
+// };
+
+
+
 exports.autoGenerateOrders = async () => {
   try {
+    // Simple date handling - use UTC dates only
+    // const today = new Date();
+    // today.setHours(0, 0, 0, 0);
+    
+    // console.log(`Today: ${today.toISOString()}`);
+
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+today.setHours(0, 0, 0, 0);
+
+// Add 1 day
+today.setDate(today.getDate() );
+
+console.log(`Today +1: ${today.toISOString()}`);
 
     const plans = await Plan.find({
       isActive: true,
       planType: { $ne: "introductory" },
     }).populate("customer");
 
+    console.log(`Found ${plans.length} active plans`);
+
     for (const plan of plans) {
       const customer = plan.customer;
       if (!customer) continue;
 
-      // Filter out past dates and sort remaining dates
-      const futureDates = plan.dates.filter(date => new Date(date) >= today);
-      const sortedDates = futureDates.sort((a, b) => new Date(a) - new Date(b));
+      console.log(`Processing: ${customer.name}, Type: ${plan.planType}`);
       
-      // If no dates left, skip this plan
-      if (sortedDates.length === 0) continue;
+      // Check if today is the LAST date
+      const sortedDates = [...plan.dates].map(d => new Date(d));
+      console.log(sortedDates, "HIIIII");
+      
+      const lastDate = sortedDates[sortedDates.length - 1];
+      console.log(lastDate, "lst");
+      
 
-      const firstDate = new Date(sortedDates[0]);
-      firstDate.setHours(0, 0, 0, 0);
+      console.log(`Last date: ${lastDate}, Today: ${today}`);
+      console.log(`Dates equal: ${today.toDateString() === lastDate.toDateString()}`);
 
-      // If today is NOT the first plan date, skip
-      if (today.getTime() !== firstDate.getTime()) continue;
+      // ONLY proceed if today is the LAST date
+      if (today.toDateString() !== lastDate.toDateString()) {
+        console.log(`❌ Today is not the last plan date for ${customer.name}. Skipping.`);
+        continue;
+      }
 
-      // Check if there is already an order for today's date
+      console.log(`✅ Today is the LAST plan date for ${customer.name}`);
+
+      // Check for existing order
       const existingOrder = await OrderProduct.findOne({
         customer: customer._id,
         plan: plan._id,
         "selectedPlanDetails.dates.date": today
       });
 
-      if (existingOrder) continue;
+      if (existingOrder) {
+        console.log(`❌ Order already exists for ${customer.name}`);
+        continue;
+      }
 
+      console.log(`🔄 EXTENDING PLAN and creating order for ${customer.name}`);
+      
+      // EXTEND PLAN - replace all dates with new dates
+      let newDates = [];
+      const nextStart = new Date(today);
+      nextStart.setDate(nextStart.getDate() + 2);
+
+      console.log(nextStart, "hiii next");
+      
+
+      // Generate new dates based on plan type
+      const daysToAdd = plan.planType === "monthly" ? 30 : 
+                       plan.planType === "weekly" ? 7 : 1;
+
+      for (let i = 0; i < daysToAdd; i++) {
+        const newDate = new Date(nextStart);
+        newDate.setDate(nextStart.getDate() + i);
+        newDate.setHours(0, 0, 0, 0);
+        newDates.push(newDate);
+      }
+
+      console.log(`Replacing all dates with ${newDates.length} new dates starting from: ${nextStart.toISOString()}`);
+
+      // REPLACE all dates with new dates
+      plan.dates = newDates;
+      plan.markModified('dates');
+      
+      try {
+        await plan.save();
+        console.log(`✅ PLAN UPDATED SUCCESSFULLY. Now has ${plan.dates.length} dates`);
+        
+        // Verify by fetching the plan again
+        const updatedPlan = await Plan.findById(plan._id);
+        console.log(`Verified - Plan now has ${updatedPlan.dates.length} dates from ${updatedPlan.dates[0].toISOString().split('T')[0]} to ${updatedPlan.dates[updatedPlan.dates.length - 1].toISOString().split('T')[0]}`);
+      } catch (saveError) {
+        console.error('❌ Error saving plan:', saveError);
+      }
+
+      // Create order for the LAST day
       const orderAddress = customer.address?.[0];
       if (!orderAddress) continue;
 
-      const lastOrder = await OrderProduct.findOne({
-        customer: customer._id,
-        plan: plan._id,
+      const previousOrder = await OrderProduct.findOne({
+        customer: customer._id
       }).sort({ createdAt: -1 });
 
-      if (!lastOrder) continue;
+      if (!previousOrder) continue;
 
       const validatedProductItems = await Promise.all(
-        lastOrder.productItems.map(async (item) => {
+        previousOrder.productItems.map(async (item) => {
           const product = await Product.findById(item.product);
-          if (!product) return null;
-          return {
+          return product ? {
             product: item.product,
             quantity: item.quantity,
             routePrice: item.routePrice,
-          };
+          } : null;
         })
       ).then(items => items.filter(item => item !== null));
 
       const totalRoutePrice = validatedProductItems.reduce(
-        (sum, item) => sum + (item.routePrice * item.quantity),
-        0
+        (sum, item) => sum + (item.routePrice * item.quantity), 0
       );
 
-      // --- Generate new dates for the NEXT cycle ---
-      let newDates = [];
-      const lastDate = new Date(sortedDates[sortedDates.length - 1]);
-      const nextStart = new Date(lastDate);
-      nextStart.setDate(nextStart.getDate() + 1);
-
-      switch (plan.planType) {
-        case "daily":
-          // For daily, add next day only
-          newDates = [new Date(nextStart)];
-          break;
-        case "weekly":
-          // For weekly, add next 7 days
-          for (let i = 0; i < 7; i++) {
-            const d = new Date(nextStart);
-            d.setDate(nextStart.getDate() + i);
-            newDates.push(d);
-          }
-          break;
-        case "monthly":
-          // For monthly, add next 30 days
-          for (let i = 0; i < 30; i++) {
-            const d = new Date(nextStart);
-            d.setDate(nextStart.getDate() + i);
-            newDates.push(d);
-          }
-          break;
-        case "alternative":
-          // For alternative days, add dates with 1 day gap
-          const altDays = plan.dates.length || 15; // Default to 15 days if no dates
-          for (let i = 0; i < altDays; i += 2) { // Every 2nd day
-            const d = new Date(nextStart);
-            d.setDate(nextStart.getDate() + i);
-            newDates.push(d);
-          }
-          break;
-        case "custom":
-          // For custom, replicate the pattern with same number of days
-          const customDays = plan.dates.length;
-          for (let i = 0; i < customDays; i++) {
-            const d = new Date(nextStart);
-            d.setDate(nextStart.getDate() + i);
-            newDates.push(d);
-          }
-          break;
-        default:
-          continue;
-      }
-
-      // Remove the current date (today) from plan dates since it's being processed
-      const updatedPlanDates = sortedDates.slice(1).concat(newDates);
-      
-      // Update plan with new dates
-      plan.dates = updatedPlanDates;
-      await plan.save();
-
-      // Create selected plan details for the order
       const selectedPlanDetails = {
         planType: plan.planType,
-        dates: [
-          {
-            date: today,
-            status: "pending"
-          }
-        ],
+        dates: [{ date: today, status: "pending" }],
         isActive: plan.isActive,
       };
 
@@ -3118,36 +3311,35 @@ exports.autoGenerateOrders = async () => {
         plan: plan._id,
         selectedPlanDetails,
         totalPrice: totalRoutePrice,
-        paymentMethod: "not selected",
+        paymentMethod: "Cash",
         paymentStatus: "unpaid",
         address: orderAddress,
         paidamount: 0,
-        Total: totalRoutePrice, // Set Total to match totalPrice
+        Total: totalRoutePrice,
       });
 
       await newOrder.save();
+      console.log(`✅ ORDER CREATED for ${customer.name} on LAST day`);
 
-      // Send notifications
+      // Notifications
       const deliveryBoy = await AdminsModel.findOne({
         route: customer?.routeno,
       });
 
       if (deliveryBoy) {
-        const notificationCustomer = new Notification({
+        await Notification.create({
           customerId: customer._id,
-          message: `🛒 Auto-plan order created for ${today.toLocaleDateString()}`,
+          message: `🛒 Auto-order created for LAST day ${today.toISOString().split('T')[0]}`,
         });
-        await notificationCustomer.save();
-
-        const notification = new Notification({
+        await Notification.create({
           deliveryboyId: deliveryBoy._id,
-          message: `🛒 ${customer.name} (Route ${customer?.routeno}) auto-plan order created`,
+          message: `🛒 ${customer.name} auto-order created on LAST day`,
         });
-        await notification.save();
       }
-
     }
+    
+    console.log("🎉 Auto order generation completed");
   } catch (err) {
-    console.error("Auto-generate order error:", err);
+    console.error("❌ Auto-generate order error:", err);
   }
 };
