@@ -139,6 +139,7 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
   });
 });
 
+
 // exports.verifyOtp = asyncHandler(async (req, res) => {
 //     const { phone, otp } = req.body;
 
