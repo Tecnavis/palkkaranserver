@@ -17,7 +17,6 @@ const AdminsModel = require("../models/admins");
 const { AddOnResultInstance } = require("twilio/lib/rest/api/v2010/account/recording/addOnResult");
 const Invoice = require("../models/invoice"); 
 
-const otpStorage = new Map();
 require("dotenv").config();
 
 
