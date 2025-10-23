@@ -1339,3 +1339,4 @@ exports.confirmCustomer = asyncHandler(async (req, res) => {
 
   res.status(200).json({ message: "Customer account confirmed successfully." });
 });
+
