@@ -64,7 +64,7 @@ exports.login = asyncHandler(async (req, res) => {
     });
 
   
-    res.status(200).json({ message: "OTP sent successfully" });
+    res.status(200).json({ message: "OTP sent successfully" , otp});
   } catch (error) {
     console.error("Twilio Error:", error);
     res.status(500).json({ message: "Failed to send OTP" });
