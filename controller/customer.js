@@ -22,122 +22,124 @@ require("dotenv").config();
 
 
 
-exports.login = asyncHandler(async (req, res) => {
-  let { phone } = req.body;
+// exports.login = asyncHandler(async (req, res) => {
+//   let { phone } = req.body;
 
-  // Ensure +91 prefix with space
-  if (!phone.startsWith("+91")) {
-    phone = "+91 " + phone.replace(/^\+91\s*/, "").trim();
-  }
+//   // Ensure +91 prefix with space
+//   if (!phone.startsWith("+91")) {
+//     phone = "+91 " + phone.replace(/^\+91\s*/, "").trim();
+//   }
     
-  // Check if customer exists
-  const customer = await CustomerModel.findOne({ phone });
+//   // Check if customer exists
+//   const customer = await CustomerModel.findOne({ phone });
 
   
-  if (!customer) {
-    return res.status(400).json({ message: "Phone number not registered" });
-  }
+//   if (!customer) {
+//     return res.status(400).json({ message: "Phone number not registered" });
+//   }
 
-  // Check if account is confirmed
-  if (!customer.isConfirmed) {
-    return res
-      .status(400)
-      .json({
-        message:
-          "Your account is not confirmed. Please confirm your account before logging in.",
-      });
-  }
-
-  
-
-  // Generate OTP (6-digit random number)
-  const otp = Math.floor(100000 + Math.random() * 900000);
-  otpStorage.set(phone, otp); // Store OTP temporarily
-
-
-  // Send OTP via Twilio
-  try {
-    await client.messages.create({
-      body: `Your verification code is: ${otp}`,
-      from: process.env.TWLIO_NUMBER,
-      to: phone,
-    });
+//   // Check if account is confirmed
+//   if (!customer.isConfirmed) {
+//     return res
+//       .status(400)
+//       .json({
+//         message:
+//           "Your account is not confirmed. Please confirm your account before logging in.",
+//       });
+//   }
 
   
-    res.status(200).json({ message: "OTP sent successfully" , otp});
-  } catch (error) {
-    console.error("Twilio Error:", error);
-    res.status(500).json({ message: "Failed to send OTP" });
-  }
-});
 
-exports.verifyOtp = asyncHandler(async (req, res) => {
-  const { phone, otp, fcmToken } = req.body;
+//   // Generate OTP (6-digit random number)
+//   const otp = Math.floor(100000 + Math.random() * 900000);
 
-  // Check if OTP is valid
-  const formattedPhone = phone.startsWith("+91")
-      ? phone
-      : "+91 " + phone.replace(/^\+91\s*/, "").trim();
-
-    // Validate OTP
-    const storedOtp = otpStorage.get(formattedPhone);
-    if (!storedOtp || storedOtp != otp) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
-    }
+//   customer.otp = otp
+//   customer.save();
 
 
+//   // Send OTP via Twilio
+//   try {
+//     await client.messages.create({
+//       body: `Your verification code is: ${otp}`,
+//       from: process.env.TWLIO_NUMBER,
+//       to: phone,
+//     });
 
-    // Remove OTP from storage
-    otpStorage.delete(formattedPhone);
+  
+//     res.status(200).json({ message: "OTP sent successfully" , otp});
+//   } catch (error) {
+//     console.error("Twilio Error:", error);
+//     res.status(500).json({ message: "Failed to send OTP" });
+//   }
+// });
 
-  // Find customer
-  const customer = await CustomerModel.findOne({ phone : formattedPhone });
-  if (!customer) {
-    return res.status(400).json({ message: "Customer not found" });
-  }
+// exports.verifyOtp = asyncHandler(async (req, res) => {
+//   const { phone, otp, fcmToken } = req.body;
+
+//   // Check if OTP is valid
+//   const formattedPhone = phone.startsWith("+91")
+//       ? phone
+//       : "+91 " + phone.replace(/^\+91\s*/, "").trim();
+
+//     // Validate OTP
+//     const storedOtp = otpStorage.get(formattedPhone);
+//     if (!storedOtp || storedOtp != otp) {
+//       return res.status(400).json({ message: "Invalid or expired OTP" });
+//     }
 
 
-  // Update or create FCM token
-  if (fcmToken && customer.fcmToken !== fcmToken) {
-    customer.fcmToken = fcmToken;
-    await customer.save();
-  }
 
-  // Generate access token
-  const accessToken = jwt.sign(
-    {
-      user: {
-        username: customer.name,
-        userId: customer._id,
-        userPhone: customer.phone,
-        address: customer.address,
-        location: customer.location,
-        routeno: customer.routeno,
-        routename: customer.routename,
-        fcmToken: customer.fcmToken,
-      },
-    },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "15m" }
-  );
+//     // Remove OTP from storage
+//     otpStorage.delete(formattedPhone);
 
-  // Respond with access token and user details
-  res.status(200).json({
-    accessToken,
-    user: {
-      username: customer.name,
-      _id: customer._id,
-      UserId: customer.customerId,
-      userPhone: customer.phone,
-      address: customer.address,
-      location: customer.location,
-      routeno: customer.routeno || "",
-      routename: customer.routename || "",
-      proofimage: customer.image || "",
-      fcmToken: customer.fcmToken || "",
-    },
-  });
-});
+//   // Find customer
+//   const customer = await CustomerModel.findOne({ phone : formattedPhone });
+//   if (!customer) {
+//     return res.status(400).json({ message: "Customer not found" });
+//   }
+
+
+//   // Update or create FCM token
+//   if (fcmToken && customer.fcmToken !== fcmToken) {
+//     customer.fcmToken = fcmToken;
+//     await customer.save();
+//   }
+
+//   // Generate access token
+//   const accessToken = jwt.sign(
+//     {
+//       user: {
+//         username: customer.name,
+//         userId: customer._id,
+//         userPhone: customer.phone,
+//         address: customer.address,
+//         location: customer.location,
+//         routeno: customer.routeno,
+//         routename: customer.routename,
+//         fcmToken: customer.fcmToken,
+//       },
+//     },
+//     process.env.ACCESS_TOKEN_SECRET,
+//     { expiresIn: "15m" }
+//   );
+
+//   // Respond with access token and user details
+//   res.status(200).json({
+//     accessToken,
+//     user: {
+//       username: customer.name,
+//       _id: customer._id,
+//       UserId: customer.customerId,
+//       userPhone: customer.phone,
+//       address: customer.address,
+//       location: customer.location,
+//       routeno: customer.routeno || "",
+//       routename: customer.routename || "",
+//       proofimage: customer.image || "",
+//       fcmToken: customer.fcmToken || "",
+//     },
+//   });
+// });
 
 // exports.verifyOtp = asyncHandler(async (req, res) => {
 //     const { phone, otp } = req.body;
@@ -194,6 +196,116 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
 // });
 
 // Function to generate the next customerId
+
+exports.login = asyncHandler(async (req, res) => {
+  let { phone } = req.body;
+
+  // Ensure +91 prefix
+  if (!phone.startsWith("+91")) {
+    phone = "+91 " + phone.replace(/^\+91\s*/, "").trim();
+  }
+
+  const customer = await CustomerModel.findOne({ phone });
+  if (!customer) {
+    return res.status(400).json({ message: "Phone number not registered" });
+  }
+
+  if (!customer.isConfirmed) {
+    return res.status(400).json({
+      message: "Your account is not confirmed. Please confirm before logging in.",
+    });
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  customer.otp = otp;
+  customer.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 min expiry
+  await customer.save();
+
+  try {
+    await client.messages.create({
+      body: `Your verification code is: ${otp}`,
+      from: process.env.TWLIO_NUMBER,
+      to: phone,
+    });
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (error) {
+    console.error("Twilio Error:", error);
+    res.status(500).json({ message: "Failed to send OTP" });
+  }
+});
+
+
+exports.verifyOtp = asyncHandler(async (req, res) => {
+  const { phone, otp, fcmToken } = req.body;
+  const formattedPhone = phone.startsWith("+91")
+    ? phone
+    : "+91 " + phone.replace(/^\+91\s*/, "").trim();
+
+  const customer = await CustomerModel.findOne({ phone: formattedPhone });
+  if (!customer) {
+    return res.status(400).json({ message: "Customer not found" });
+  }
+
+  if (customer.otp !== otp) {
+    return res.status(400).json({ message: "Invalid OTP" });
+  }
+
+  if (!customer.otpExpires || customer.otpExpires < new Date()) {
+    return res.status(400).json({ message: "OTP expired, please request a new one" });
+  }
+
+  // Clear OTP
+  customer.otp = null;
+  customer.otpExpires = null;
+
+  if (fcmToken && customer.fcmToken !== fcmToken) {
+    customer.fcmToken = fcmToken;
+  }
+
+  await customer.save();
+
+     // Generate access token
+    const accessToken = jwt.sign(
+        {
+            user: {
+                username: customer.name,
+                userId: customer._id,
+                userPhone: customer.phone,
+                address: customer.address,
+                location: customer.location,
+                routeno: customer.routeno,
+                routename: customer.routename,
+                fcmToken: customer.fcmToken
+            },
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: "15m" }
+    );
+
+    // Respond with access token and user details
+    res.status(200).json({
+        accessToken,
+        user: {
+            username: customer.name,
+            _id: customer._id,
+            UserId: customer.customerId,
+            userPhone: customer.phone,
+            address: customer.address,
+            location: customer.location,
+            routeno: customer.routeno || "",
+            routename: customer.routename || "",
+            proofimage: customer.image || "",
+            fcmToken: customer.fcmToken|| "",
+        },
+    });
+
+});
+
+
+
+
+
+
 const generateCustomerId = async () => {
   // Get the last customer record
   const lastCustomer = await CustomerModel.findOne()
