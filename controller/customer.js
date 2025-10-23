@@ -217,7 +217,6 @@ exports.login = asyncHandler(async (req, res) => {
 
   const otp = Math.floor(100000 + Math.random() * 900000);
   customer.otp = otp;
-  customer.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 min expiry
   await customer.save();
 
   try {
@@ -226,7 +225,7 @@ exports.login = asyncHandler(async (req, res) => {
       from: process.env.TWLIO_NUMBER,
       to: phone,
     });
-    res.status(200).json({ message: "OTP sent successfully" });
+    res.status(200).json({ message: "OTP sent successfully", otp });
   } catch (error) {
     console.error("Twilio Error:", error);
     res.status(500).json({ message: "Failed to send OTP" });
@@ -234,8 +233,80 @@ exports.login = asyncHandler(async (req, res) => {
 });
 
 
+// exports.verifyOtp = asyncHandler(async (req, res) => {
+//   const { phone, otp, fcmToken } = req.body;
+//   const formattedPhone = phone.startsWith("+91")
+//     ? phone
+//     : "+91 " + phone.replace(/^\+91\s*/, "").trim();
+
+//   const customer = await CustomerModel.findOne({ phone: formattedPhone });
+//   if (!customer) {
+//     return res.status(400).json({ message: "Customer not found" });
+//   }
+
+//   if (customer.otp !== otp) {
+//     return res.status(400).json({ message: "Invalid OTP" });
+//   }
+
+//   if (!customer.otpExpires || customer.otpExpires < new Date()) {
+//     return res.status(400).json({ message: "OTP expired, please request a new one" });
+//   }
+
+//   // Clear OTP
+//   customer.otp = null;
+//   customer.otpExpires = null;
+
+//   if (fcmToken && customer.fcmToken !== fcmToken) {
+//     customer.fcmToken = fcmToken;
+//   }
+
+//   await customer.save();
+
+//      // Generate access token
+//     const accessToken = jwt.sign(
+//         {
+//             user: {
+//                 username: customer.name,
+//                 userId: customer._id,
+//                 userPhone: customer.phone,
+//                 address: customer.address,
+//                 location: customer.location,
+//                 routeno: customer.routeno,
+//                 routename: customer.routename,
+//                 fcmToken: customer.fcmToken
+//             },
+//         },
+//         process.env.ACCESS_TOKEN_SECRET,
+//         { expiresIn: "15m" }
+//     );
+
+//     // Respond with access token and user details
+//     res.status(200).json({
+//         accessToken,
+//         user: {
+//             username: customer.name,
+//             _id: customer._id,
+//             UserId: customer.customerId,
+//             userPhone: customer.phone,
+//             address: customer.address,
+//             location: customer.location,
+//             routeno: customer.routeno || "",
+//             routename: customer.routename || "",
+//             proofimage: customer.image || "",
+//             fcmToken: customer.fcmToken|| "",
+//         },
+//     });
+
+// });
+
+
+
+
+// ========== VERIFY OTP ==========
 exports.verifyOtp = asyncHandler(async (req, res) => {
   const { phone, otp, fcmToken } = req.body;
+
+  // Ensure +91 format
   const formattedPhone = phone.startsWith("+91")
     ? phone
     : "+91 " + phone.replace(/^\+91\s*/, "").trim();
@@ -245,17 +316,13 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Customer not found" });
   }
 
+  // Check OTP
   if (customer.otp !== otp) {
     return res.status(400).json({ message: "Invalid OTP" });
   }
 
-  if (!customer.otpExpires || customer.otpExpires < new Date()) {
-    return res.status(400).json({ message: "OTP expired, please request a new one" });
-  }
-
-  // Clear OTP
+  // ✅ OTP is correct — remove it now
   customer.otp = null;
-  customer.otpExpires = null;
 
   if (fcmToken && customer.fcmToken !== fcmToken) {
     customer.fcmToken = fcmToken;
@@ -263,43 +330,41 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
 
   await customer.save();
 
-     // Generate access token
-    const accessToken = jwt.sign(
-        {
-            user: {
-                username: customer.name,
-                userId: customer._id,
-                userPhone: customer.phone,
-                address: customer.address,
-                location: customer.location,
-                routeno: customer.routeno,
-                routename: customer.routename,
-                fcmToken: customer.fcmToken
-            },
-        },
-        process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "15m" }
-    );
+  // Generate access token
+  const accessToken = jwt.sign(
+    {
+      user: {
+        username: customer.name,
+        userId: customer._id,
+        userPhone: customer.phone,
+        address: customer.address,
+        location: customer.location,
+        routeno: customer.routeno,
+        routename: customer.routename,
+        fcmToken: customer.fcmToken,
+      },
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "15m" }
+  );
 
-    // Respond with access token and user details
-    res.status(200).json({
-        accessToken,
-        user: {
-            username: customer.name,
-            _id: customer._id,
-            UserId: customer.customerId,
-            userPhone: customer.phone,
-            address: customer.address,
-            location: customer.location,
-            routeno: customer.routeno || "",
-            routename: customer.routename || "",
-            proofimage: customer.image || "",
-            fcmToken: customer.fcmToken|| "",
-        },
-    });
-
+  // Respond with token and user details
+  res.status(200).json({
+    accessToken,
+    user: {
+      username: customer.name,
+      _id: customer._id,
+      UserId: customer.customerId,
+      userPhone: customer.phone,
+      address: customer.address,
+      location: customer.location,
+      routeno: customer.routeno || "",
+      routename: customer.routename || "",
+      proofimage: customer.image || "",
+      fcmToken: customer.fcmToken || "",
+    },
+  });
 });
-
 
 
 

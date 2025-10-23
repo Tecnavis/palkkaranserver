@@ -73,7 +73,6 @@ const customerSchema = new mongoose.Schema({
       default: 0
     },
       otp: { type: String },
-  otpExpires: { type: Date },
 });
 
 // Pre-save hook to hash passwords
