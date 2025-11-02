@@ -148,7 +148,6 @@
 
 // module.exports = app;
 
-
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
@@ -206,7 +205,41 @@ app.use(logger('dev'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
+
+// ✅ Static Files - Serve public assets with correct MIME types
+app.use('/assets', express.static(path.join(__dirname, 'public/assets'), {
+  maxAge: '1d',
+  setHeaders: function (res, path) {
+    // Set correct MIME types for CSS files
+    if (path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+    // Set correct MIME types for JS files
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+    // Set correct MIME types for images
+    if (path.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    }
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+      res.setHeader('Content-Type', 'image/jpeg');
+    }
+    if (path.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+    }
+    if (path.endsWith('.svg')) {
+      res.setHeader('Content-Type', 'image/svg+xml');
+    }
+  }
+}));
+
+// Serve other public files
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ✅ View engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
 
 // ✅ Cron jobs
 cron.schedule("0 18 * * *", async () => {
@@ -237,10 +270,6 @@ cron.schedule("0 0 1 * *", async () => {
   }
 });
 
-// ✅ View engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
-
 // ✅ API Routes
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
@@ -261,30 +290,74 @@ app.use('/notification', notification);
 app.use('/invoice', invoice);
 app.use('/rewards', rewardRoutes);
 
-// ✅ Serve frontend build (after all API routes)
-app.use(express.static(path.join(__dirname, "dist")));
+// ✅ Serve frontend build (after API routes but before catch-all)
+app.use(express.static(path.join(__dirname, "dist"), {
+  maxAge: '1h',
+  setHeaders: function (res, path) {
+    // Set correct MIME type for HTML files
+    if (path.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html');
+    }
+  }
+}));
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
-});
-
-// ✅ 404 handler (after frontend)
-app.use((req, res, next) => {
+// ✅ API 404 handler - only for API routes
+app.use('/api/*', (req, res, next) => {
   res.status(404).json({
     status: 404,
-    message: 'The requested resource was not found',
+    message: 'The requested API resource was not found',
     path: req.path,
   });
 });
 
-// ✅ Error handler
+app.use('/admin/*', (req, res, next) => {
+  res.status(404).json({
+    status: 404,
+    message: 'The requested admin resource was not found',
+    path: req.path,
+  });
+});
+
+app.use('/users/*', (req, res, next) => {
+  res.status(404).json({
+    status: 404,
+    message: 'The requested user resource was not found',
+    path: req.path,
+  });
+});
+
+// ✅ SPA catch-all route (MUST BE LAST)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+// ✅ Global error handler
 app.use((err, req, res, next) => {
-  const error = req.app.get('env') === 'development' ? err : {};
+  // Log error
+  console.error('Error:', err.message);
+  console.error('Stack:', err.stack);
+
+  const isDevelopment = req.app.get('env') === 'development';
+  
   res.status(err.status || 500).json({
     status: err.status || 500,
     message: err.message || 'Internal Server Error',
-    error: req.app.get('env') === 'development' ? error : {},
+    ...(isDevelopment && { 
+      error: err,
+      stack: err.stack 
+    })
   });
+});
+
+// ✅ Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
 
 module.exports = app;
