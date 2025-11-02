@@ -4,6 +4,7 @@
 
 // const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
 
+
 // admin.initializeApp({
 //  credential: admin.credential.cert(serviceAccount),
 // });
@@ -12,12 +13,15 @@
 
 // module.exports = messaging;
 
-
 const admin = require('firebase-admin');
 
-const serviceAccount = JSON.parse(
-  Buffer.from(process.env.FIREBASE_CONFIG_BASE64, 'base64').toString('utf8')
-);
+if (!process.env.FIREBASE_CONFIG) {
+  console.error("❌ Missing FIREBASE_CONFIG environment variable");
+  process.exit(1);
+}
+
+// ✅ Just parse it directly — no Buffer needed
+const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -25,3 +29,4 @@ admin.initializeApp({
 
 const messaging = admin.messaging();
 module.exports = messaging;
+
