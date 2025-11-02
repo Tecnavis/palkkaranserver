@@ -78,7 +78,9 @@ exports.resetPassword = async (req, res) => {
 //create admin
 exports.create = asyncHandler(async (req, res) => {
     const { name, email, password, role, phone } = req.body;
-    const image = req.file.filename;
+              const  image = req.cloudinaryImageUrl || null;
+
+
     if (!name || !email || !password || !role || !phone) {
       return res.status(400).json({ message: "Please add all fields" });
     }
@@ -157,9 +159,11 @@ exports.update = asyncHandler(async (req, res) => {
       admin.whatsapp = whatsapp;
       admin.route = route;
       admin.address = address;
-      if (req.file) {
-        admin.image = req.file.filename;
+      if (req.cloudinaryImageUrl) {
+        admin.image =  req.cloudinaryImageUrl;
       }
+
+
       const updatedAdmin = await admin.save();
       return res.json({ updatedAdmin });
       
