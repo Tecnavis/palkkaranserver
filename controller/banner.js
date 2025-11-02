@@ -51,10 +51,38 @@ exports.update = asyncHandler(async (req, res) => {
 
 
 //delete banner
-exports.delete = asyncHandler(async (req, res) => {
-    const banner = await BannerModel.findByIdAndDelete(req.params.id);
-    res.status(200).json(banner);
-})
+exports.deleteBannerImage = asyncHandler(async (req, res) => {
+  const { id, index } = req.params;
+
+  // Find the banner by ID
+  const banner = await BannerModel.findById(id);
+
+  if (!banner) {
+    return res.status(404).json({ message: "Banner not found" });
+  }
+
+  // Ensure index is valid
+  const imgIndex = parseInt(index);
+  if (isNaN(imgIndex) || imgIndex < 0 || imgIndex >= banner.images.length) {
+    return res.status(400).json({ message: "Invalid image index" });
+  }
+
+  // Remove the image at that index
+  const removedImage = banner.images.splice(imgIndex, 1)[0];
+
+  // Optionally: delete the actual file from your server (if stored locally)
+  // const imagePath = path.join(__dirname, "../uploads", removedImage);
+  // if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+
+  // Save updated banner
+  await banner.save();
+
+  res.status(200).json({
+    message: "Image removed successfully",
+    removedImage,
+    updatedBanner: banner,
+  });
+});
 
 //delete all banner
 exports.deleteAll = asyncHandler(async (req, res) => {

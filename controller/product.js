@@ -21,7 +21,7 @@ const generateProductId = async () => {
   exports.create = asyncHandler(async (req, res) => {
     const { title, category, price, description, quantity, discount } = req.body;
   
-    if (!title || !category || !price || !description || !quantity || !req.files.coverimage || !req.files.images) {
+    if (!title || !category || !price || !description || !quantity ) {
       return res.status(400).json({
         success: false,
         error: "Missing required fields",
@@ -41,12 +41,16 @@ const generateProductId = async () => {
   
     const categoryName = categoryDoc.name;
   
-    const images = req.files["images"]
-      ? req.files["images"].map((file) => file.filename)
-      : [];
-    const coverImage = req.files["coverimage"]
-      ? req.files["coverimage"][0].filename
-      : null;
+    // const images = req.files["images"]
+    //   ? req.files["images"].map((file) => file.filename)
+    //   : [];
+    // // const coverImage = req.files["coverimage"]
+    // //   ? req.files["coverimage"][0].filename
+    // //   : null;
+
+
+          const  coverImage = req.cloudinaryImageUrl || null;
+
   
     const productData = {
       category: categoryName, // Save the name instead of the ID
@@ -57,7 +61,6 @@ const generateProductId = async () => {
       description,
       quantity,
       discount,
-      images,
     };
   
     try {
@@ -91,16 +94,15 @@ exports.get = asyncHandler(async (req, res) => {
 exports.update = asyncHandler(async (req, res) => {
     try {
    
-  
+
+
       const updates = req.body;
-      if (req.files) {
-        if (req.files.images) {
-          updates.images = req.files.images.map((file) => file.filename);
+    
+  
+        if (req.cloudinaryImageUrl) {
+          updates.coverimage = req.cloudinaryImageUrl;
         }
-        if (req.files.coverimage) {
-          updates.coverimage = req.files.coverimage[0].filename;
-        }
-      }
+      
   
       const updatedProduct = await Product.findOneAndUpdate(
         { _id: req.params.id },

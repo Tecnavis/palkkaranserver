@@ -3,7 +3,8 @@ const Category = require("../models/category");
 
 //create category
 exports.create = asyncHandler(async (req, res) => {
-    const image = req.file.filename;
+
+     const  image = req.cloudinaryImageUrl || null;
     const name = req.body.name;
     const category = await Category.create({
         name,
@@ -26,8 +27,8 @@ exports.get = asyncHandler(async (req, res) => {
 
 //update category
 exports.update = asyncHandler(async (req, res) => {
-    const image = req.file.filename;
-    const name = req.body.name;
+ const  image = req.cloudinaryImageUrl;
+     const name = req.body.name;
     const category = await Category.findByIdAndUpdate(req.params.id, {
         name,
         image

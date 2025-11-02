@@ -52,15 +52,15 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-// cron.schedule("0 18 * * *", async () => {
-//   console.log("Running daily auto order generation at 6:00 PM...");
-//   await autoGenerateOrders();
-// });
-
-cron.schedule("49 21 * * *", async () => {
-  console.log("Running daily auto order generation at 9:06 PM...");
+cron.schedule("0 18 * * *", async () => {
+  console.log("Running daily auto order generation at 6:00 PM...");
   await autoGenerateOrders();
 });
+
+// cron.schedule("18 21 * * *", async () => {
+//   console.log("Running daily auto order generation at 9:06 PM...");
+//   await autoGenerateOrders();
+// });
 
 
 // Run every 1st of month at 12:00 AM

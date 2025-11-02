@@ -20,7 +20,7 @@ router.post('/',  uploadImageArray, Controller.create); // 10 is the max number 
 router.get('/', Controller.getAll);
 router.get('/:id', Controller.get);
 router.put('/:id', uploadImageSingle, Controller.update);
-router.delete('/:id', Controller.delete);
+router.delete('/:id/image/:index', Controller.deleteBannerImage);
 router.delete('/', Controller.deleteAll);
 
 module.exports = router;

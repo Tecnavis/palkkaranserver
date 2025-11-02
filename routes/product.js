@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 const Controller = require('../controller/product')
 const multer = require("multer");
+const { uploadImageSingle, uploadImageArray } = require('../lib/multer');
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "public/images");
@@ -18,13 +19,13 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 }).fields([{ name: "images", maxCount: 10 }, { name: "coverimage", maxCount: 1 }]);
 
-router.post('/', upload, Controller.create);
+router.post('/', uploadImageSingle,  Controller.create);
 router.get('/',Controller.getAll)
 
 router.get("/popular", Controller.getPopular); 
 router.get('/:id',Controller.get)
 router.delete('/:id',Controller.deleteProduct)
-router.put('/:id',upload,Controller.update)
+router.put('/:id', uploadImageSingle,   Controller.update)
 
 router.get("/search/:query", Controller.searchProducts);
 
