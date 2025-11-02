@@ -14,6 +14,8 @@
 // module.exports = messaging;
 
 const admin = require('firebase-admin');
+const dotenv = require("dotenv")
+dotenv.config();
 
 if (!process.env.FIREBASE_CONFIG) {
   console.error("❌ Missing FIREBASE_CONFIG environment variable");
