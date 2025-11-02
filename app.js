@@ -52,6 +52,13 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 
+
+
+// View engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+
 cron.schedule("0 18 * * *", async () => {
   console.log("Running daily auto order generation at 6:00 PM...");
   await autoGenerateOrders();
@@ -89,11 +96,6 @@ cron.schedule("0 0 1 * *", async () => {
     console.error("Error in scheduled invoice generation:", err);
   }
 });
-
-
-// View engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
 
 // Routes
 app.use('/', indexRouter);
