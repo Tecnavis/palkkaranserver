@@ -7,6 +7,7 @@ var connectDB = require('./config/db');
 var cors = require('cors');
 const cron = require("node-cron");
 require("./middleware/cronjob"); // Load cron job
+const __dirname = path.resolve();
 
 
 var indexRouter = require('./routes/index');
@@ -26,6 +27,7 @@ var route = require('./routes/route');
 var rewarditem = require('./routes/rewarditem');
 var notification = require('./routes/notification');
 var invoice = require('./routes/invoice');
+
 
 const rewardRoutes = require("./routes/reward");
 const { autoGenerateOrders } = require('./controller/orderdetails');
@@ -50,6 +52,12 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(express.static(path.join(__dirname, "dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
 
 
 
