@@ -6,7 +6,11 @@ exports.create = asyncHandler(async (req, res) => {
     // Access multiple files from req.files
     // const images = req.files.map(file => file.filename);
        const images = req.cloudinaryImageUrl; // This gives an array of filenames
-    const banner = await BannerModel.create({ images }); // Store array of images
+
+       
+    const banner = await BannerModel.create({ images }); 
+    await banner.save();
+
     res.status(200).json(banner);
 });
 

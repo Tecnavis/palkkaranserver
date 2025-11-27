@@ -355,13 +355,13 @@ exports.delete = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Check if the order exists
     const order = await OrderProduct.findById(id).populate("customer");
+
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // Check if the order has an associated plan and delete it
+    // Delete plan if exists
     if (order.plan) {
       await Plan.findByIdAndDelete(order.plan);
     }
@@ -369,40 +369,49 @@ exports.delete = async (req, res) => {
     // Delete the order
     await OrderProduct.findByIdAndDelete(id);
 
-    // notification
+    // -----------------------
+    // 🔔 Customer Notification
+    // -----------------------
+    const messageCustomer = `🛒 Plan deleted`;
 
+    await new Notification({
+      customerId: order?.customer?._id,
+      message: messageCustomer,
+    }).save();
+
+    // --------------------------------------------------
+    // 🔍 Find delivery boy, but only if they exist in DB
+    // --------------------------------------------------
     const deliveryBoy = await AdminsModel.findOne({
       route: order?.customer?.routeno,
     });
 
-   
+    if (deliveryBoy) {
+      const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) plan deleted`;
 
-     const messageCustomer = `🛒 Plan deleted`;
-
-    const notificationCustomer = new Notification({
-       customerId: order?.customer?._id,
-       message: messageCustomer,
-    });
-    await notificationCustomer.save();
-
-    const message = `🛒 ${order?.customer?.name} (Route ${order?.customer?.routeno}) plan deleted`;
-
-    const notification = new Notification({
-      deliveryboyId: deliveryBoy._id,
-      message,
-    });
-    await notification.save();
+      await new Notification({
+        deliveryboyId: deliveryBoy._id,
+        message,
+      }).save();
+    } else {
+      console.log(
+        "⚠️ No delivery boy found for route:",
+        order?.customer?.routeno
+      );
+    }
 
     res
       .status(200)
       .json({ message: "Order and associated plan deleted successfully" });
   } catch (error) {
     console.error("Error deleting order and plan:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to delete the order", error: error.message });
+    res.status(500).json({
+      message: "Failed to delete the order",
+      error: error.message,
+    });
   }
 };
+
 
 exports.getSelectedPlanByCustomer = asyncHandler(async (req, res) => {
   const { customerId } = req.params;
