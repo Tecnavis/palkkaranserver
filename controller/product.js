@@ -94,10 +94,9 @@ exports.get = asyncHandler(async (req, res) => {
 exports.update = asyncHandler(async (req, res) => {
     try {
    
-
-
       const updates = req.body;
-    
+
+        
   
         if (req.cloudinaryImageUrl) {
           updates.coverimage = req.cloudinaryImageUrl;
